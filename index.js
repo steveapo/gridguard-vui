@@ -155,7 +155,10 @@ app.post('/webhook', (req, res) => {
       const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
       const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
       reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: High. Time: ' + time + '.');
-      
+  
+  } else if (intent === 'emergency-procedures - next-step') {
+      reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Do you need me to repeat any step?');
+    
   } else {
     reply(res, 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.');
   }
