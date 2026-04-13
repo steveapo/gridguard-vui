@@ -149,6 +149,13 @@ app.post('/webhook', (req, res) => {
     const eq = params['equipment-id'];
     reply(res, manualData[eq] || 'Manual not found. Contact maintenance on Extension 4420.');
 
+  } else if (intent === 'outage-status - report-incident') {
+      const zone = params['zone'] || 'the affected zone';
+      const type = params['incident-type'] || 'Power Outage';
+      const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
+      const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+      reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: High. Time: ' + time + '.');
+      
   } else {
     reply(res, 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.');
   }
