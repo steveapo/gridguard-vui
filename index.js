@@ -128,9 +128,10 @@ app.post('/webhook', (req, res) => {
     reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: ' + severity + '. Time: ' + time + '.');
 
   } else if (intent === 'emergency-procedures') {
-    const type = params['procedure-type'];
-    reply(res, procedureData[type] || 'Please specify: Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
-
+    const rawType = params['procedure-type'];
+    const type = Object.keys(procedureData).find(k => k.toLowerCase() === (rawType || '').toLowerCase());
+    reply(res, type ? procedureData[type] : 'Please specify: Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
+    
   } else if (intent === 'emergency-procedures - next-step') {
     reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Do you need me to repeat any step?');
 
