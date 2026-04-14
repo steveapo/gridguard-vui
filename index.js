@@ -3,6 +3,8 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
+// ---- STATIC DATA ----
+
 const outageData = {
   "Zone 1": { status: "operational", load: "72%", lastCheck: "2 hours ago" },
   "Zone 2": { status: "operational", load: "65%", lastCheck: "1 hour ago" },
@@ -62,9 +64,18 @@ const manualData = {
   "Pump Station P-1": "Manual reference PS-P1-v2. Section 3 covers operating pressure. Digital copy in /manuals/pumps/"
 };
 
+// ---- SESSION STATE ----
+
+let lastResponse = 'No previous response to repeat.';
+
+// ---- REPLY HELPER ----
+
 function reply(res, text) {
+  lastResponse = text;
   res.json({ fulfillmentText: text });
 }
+
+// ---- WEBHOOK HANDLER ----
 
 app.post('/webhook', (req, res) => {
   const intent = req.body.queryResult.intent.displayName;
@@ -85,6 +96,13 @@ app.post('/webhook', (req, res) => {
       const active = Object.keys(outageData).filter(k => outageData[k].status !== 'operational').map(k => k + ': ' + outageData[k].status + ', ETA ' + outageData[k].eta);
       reply(res, active.length > 0 ? 'Active outages: ' + active.join('. ') + '.' : 'No active outages. All zones operational.');
     }
+
+  } else if (intent === 'outage-status - report-incident') {
+    const zone = params['zone'] || 'the affected zone';
+    const type = params['incident-type'] || 'Power Outage';
+    const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
+    const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: High. Time: ' + time + '.');
 
   } else if (intent === 'equipment-status') {
     const eq = params['equipment-id'];
@@ -112,6 +130,9 @@ app.post('/webhook', (req, res) => {
   } else if (intent === 'emergency-procedures') {
     const type = params['procedure-type'];
     reply(res, procedureData[type] || 'Please specify: Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
+
+  } else if (intent === 'emergency-procedures - next-step') {
+    reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Do you need me to repeat any step?');
 
   } else if (intent === 'resource-availability') {
     reply(res, 'Available resources: Generator G-3 on standby, fuel 87%. Three maintenance technicians on call. One spare transformer in storage. Emergency vehicle available.');
@@ -149,16 +170,9 @@ app.post('/webhook', (req, res) => {
     const eq = params['equipment-id'];
     reply(res, manualData[eq] || 'Manual not found. Contact maintenance on Extension 4420.');
 
-  } else if (intent === 'outage-status - report-incident') {
-      const zone = params['zone'] || 'the affected zone';
-      const type = params['incident-type'] || 'Power Outage';
-      const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
-      const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
-      reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: High. Time: ' + time + '.');
-  
-  } else if (intent === 'emergency-procedures - next-step') {
-      reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Do you need me to repeat any step?');
-    
+  } else if (intent === 'repeat-last') {
+    reply(res, lastResponse);
+
   } else {
     reply(res, 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.');
   }
