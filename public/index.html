@@ -81,7 +81,7 @@
     .mic-wrap{position:relative;width:clamp(44px,4.5vw,56px);height:clamp(44px,4.5vw,56px);flex-shrink:0}
     .mic-pulse{position:absolute;inset:-8px;border-radius:50%;border:1.5px solid var(--ok);opacity:0;pointer-events:none}
     .mic-wrap.listening .mic-pulse{animation:pulseSlow 1.8s ease-out infinite}
-    .mic-wrap.barge    .mic-pulse{border-color:var(--warn);animation:pulseSlow 1.4s ease-out infinite}
+    .mic-wrap.barge     .mic-pulse{border-color:var(--warn);animation:pulseSlow 1.4s ease-out infinite}
     .mic-wrap.speaking  .mic-pulse{border-color:var(--blue);animation:pulseSlow 1.2s ease-out infinite}
 
     .mic-btn{width:100%;height:100%;border-radius:50%;border:1.5px solid var(--border-hi);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .2s,box-shadow .2s;position:relative;z-index:1;outline:none}
@@ -99,7 +99,7 @@
     .waveform{display:flex;align-items:center;gap:3px;height:clamp(20px,2.5vh,28px);opacity:0;transition:opacity .25s;flex-shrink:0}
     .waveform.active{opacity:1}
     .wb{width:3px;border-radius:2px;background:var(--ok);animation:waveAnim .9s ease-in-out infinite}
-    .waveform.barge-wf  .wb{background:var(--warn);animation-duration:.7s}
+    .waveform.barge-wf    .wb{background:var(--warn);animation-duration:.7s}
     .waveform.speaking-wf .wb{background:var(--blue);animation-duration:.6s}
     .wb:nth-child(1){animation-delay:0s}.wb:nth-child(2){animation-delay:.1s}.wb:nth-child(3){animation-delay:.2s}
     .wb:nth-child(4){animation-delay:.3s}.wb:nth-child(5){animation-delay:.2s}.wb:nth-child(6){animation-delay:.1s}.wb:nth-child(7){animation-delay:0s}
@@ -155,7 +155,7 @@
         <div class="hint" onclick="sendQuery('Check Transformer T-12')"><span class="hint-arrow">→</span>Check Transformer T-12</div>
         <div class="hint" onclick="sendQuery('Read me the evacuation procedure')"><span class="hint-arrow">→</span>Read me the evacuation procedure</div>
         <div class="hint" onclick="sendQuery('Who is the current shift supervisor?')"><span class="hint-arrow">→</span>Who is the current shift supervisor?</div>
-        <div class="hint" onclick="sendQuery('Are there any weather alerts?')"><span class="hint-arrow">→</span>Are there any weather alerts?</div>
+        <div class="hint" onclick="sendQuery('What can you do?')"><span class="hint-arrow">→</span>What can you do?</div>
       </div>
       <div class="typing-indicator" id="typing">
         <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
@@ -186,7 +186,7 @@
       </div>
       <div class="status-label" id="status-label">Press mic or type to begin</div>
       <div class="barge-hint" id="barge-hint">say "stop" or "repeat" to interrupt</div>
-      <button class="stop-btn" id="stop-btn" onclick="stopAgent(false)">■ STOP</button>
+      <button class="stop-btn" id="stop-btn" onclick="stopAndKillMic()">■ STOP</button>
     </div>
     <div class="input-row">
       <input class="txt-input" id="txt-input" placeholder="Type a query..." onkeydown="if(event.key==='Enter')sendText()"/>
@@ -198,9 +198,9 @@
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let micActive     = false;
-let phase         = 'idle';       // idle | listening | processing | speaking
-let mainRec       = null;         // recognition for normal operator input
-let bargeRec      = null;         // recognition ONLY for barge-in keywords during speaking
+let phase         = 'idle';
+let mainRec       = null;
+let bargeRec      = null;
 let mainRunning   = false;
 let bargeRunning  = false;
 let speechSupported = false;
@@ -209,12 +209,12 @@ let lastAgentText = '';
 let silenceTimer  = null;
 let interimText   = '';
 let pendingQuery  = false;
-let currentAudio  = null;         // HTMLAudioElement for Azure TTS
-let cooldownUntil = 0;            // timestamp — ignore results until this time
+let currentAudio  = null;
+let cooldownUntil = 0;
 
 const STOP_WORDS   = ['stop','halt','quiet','silence','enough'];
 const REPEAT_WORDS = ['repeat','repeat that','say that again','again','what did you say'];
-const COOLDOWN_MS  = 600;         // ms to ignore recognition after agent finishes
+const COOLDOWN_MS  = 600;
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 function setTheme(t){
@@ -234,18 +234,17 @@ function initSpeech(){
   if(!SR){ setLabel('idle','Voice unavailable — use text input'); return; }
   speechSupported=true;
 
-  // ── MAIN RECOGNITION — for operator input only ───────────────────────────
+  // ── MAIN RECOGNITION — operator input ────────────────────────────────────
   mainRec=new SR();
   mainRec.continuous=true;
   mainRec.interimResults=true;
   mainRec.lang='en-US';
   mainRec.maxAlternatives=1;
-
   mainRec.onstart=()=>{ mainRunning=true; };
 
   mainRec.onresult=(e)=>{
-    if(!micActive||phase==='speaking') return;       // speaking handled by bargeRec
-    if(Date.now()<cooldownUntil) return;             // still in post-speech cooldown
+    if(!micActive||phase==='speaking') return;
+    if(Date.now()<cooldownUntil) return;
 
     let interim='',final='';
     for(let i=e.resultIndex;i<e.results.length;i++){
@@ -271,53 +270,41 @@ function initSpeech(){
   mainRec.onerror=(e)=>{
     mainRunning=false;
     if(e.error==='aborted'||e.error==='no-speech'){ safeStartMain(); return; }
-    console.warn('mainRec error:',e.error);
+    console.warn('mainRec:',e.error);
   };
 
   mainRec.onend=()=>{
     mainRunning=false;
-    // Restart only when mic is active AND not speaking (bargeRec handles speaking)
     if(micActive&&phase!=='speaking') safeStartMain();
   };
 
-  // ── BARGE-IN RECOGNITION — keyword-only, runs ONLY during speaking ────────
+  // ── BARGE-IN RECOGNITION — keyword-only during speaking ──────────────────
   bargeRec=new SR();
   bargeRec.continuous=true;
-  bargeRec.interimResults=true;   // interim for faster detection
+  bargeRec.interimResults=true;
   bargeRec.lang='en-US';
   bargeRec.maxAlternatives=1;
-
   bargeRec.onstart=()=>{ bargeRunning=true; };
 
   bargeRec.onresult=(e)=>{
-    if(phase!=='speaking') return;  // only process during speaking phase
-
+    if(phase!=='speaking') return;
     let combined='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       combined+=e.results[i][0].transcript.toLowerCase()+' ';
     }
-
-    // STOP — cancel agent and return to listening
-    if(STOP_WORDS.some(w=>combined.includes(w))){
-      stopAgent(false); return;
-    }
-    // REPEAT — cancel agent and replay last response
-    if(REPEAT_WORDS.some(w=>combined.includes(w))){
-      stopAgent(true); return;
-    }
-    // All other speech during speaking is silently ignored — never sent to agent
+    if(STOP_WORDS.some(w=>combined.includes(w))){ stopAndKillMic(); return; }
+    if(REPEAT_WORDS.some(w=>combined.includes(w))){ stopAgent(true); return; }
+    // All other speech silently discarded
   };
 
   bargeRec.onerror=(e)=>{
     bargeRunning=false;
     if(e.error==='aborted') return;
-    // Restart barge-in recognition if still speaking
     if(phase==='speaking'&&micActive) safeStartBarge();
   };
 
   bargeRec.onend=()=>{
     bargeRunning=false;
-    // Restart if still speaking
     if(phase==='speaking'&&micActive) safeStartBarge();
   };
 }
@@ -338,20 +325,13 @@ function safeStartBarge(){
   },120);
 }
 
-function safeStopMain(){
-  if(!mainRunning) return;
-  try{ mainRec.stop(); }catch(e){}
-}
-
-function safeStopBarge(){
-  if(!bargeRunning) return;
-  try{ bargeRec.stop(); }catch(e){}
-}
+function safeStopMain(){ if(!mainRunning) return; try{ mainRec.stop(); }catch(e){} }
+function safeStopBarge(){ if(!bargeRunning) return; try{ bargeRec.stop(); }catch(e){} }
 
 // ─── MIC BUTTON ───────────────────────────────────────────────────────────────
 function handleMicClick(){
   if(!speechSupported){ document.getElementById('txt-input').focus(); return; }
-  if(phase==='speaking'){ stopAgent(false); return; }
+  if(phase==='speaking'){ stopAndKillMic(); return; }
 
   if(!micActive){
     micActive=true;
@@ -365,17 +345,45 @@ function handleMicClick(){
   }
 }
 
-// ─── TTS — Azure Neural with Web Speech fallback ──────────────────────────────
-async function speak(text){
-  // Stop any currently playing audio
+// ─── STOP BUTTON — kills audio AND mic ───────────────────────────────────────
+function stopAndKillMic(){
+  // Kill audio
   if(currentAudio){ currentAudio.pause(); currentAudio=null; }
   window.speechSynthesis&&window.speechSynthesis.cancel();
-
-  // Stop main recognition — bargeRec takes over
+  // Kill both recognition instances
+  safeStopBarge();
   safeStopMain();
+  // Kill mic state
+  micActive=false;
+  cooldownUntil=Date.now()+COOLDOWN_MS;
+  setPhase('idle');
+}
 
+// ─── STOP AGENT (repeat path — keeps mic alive) ───────────────────────────────
+function stopAgent(thenRepeat){
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  safeStopBarge();
+  cooldownUntil=Date.now()+COOLDOWN_MS;
+
+  if(thenRepeat&&lastAgentText){
+    setTimeout(()=>speak(lastAgentText),300);
+  } else {
+    if(micActive){
+      setPhase('listening');
+      safeStartMain();
+    } else {
+      setPhase('idle');
+    }
+  }
+}
+
+// ─── TTS — Azure Neural with Web Speech fallback ──────────────────────────────
+async function speak(text){
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  safeStopMain();
   setPhase('speaking');
-  // Start barge-in recognition
   if(micActive) safeStartBarge();
 
   try{
@@ -385,7 +393,6 @@ async function speak(text){
       body:JSON.stringify({text})
     });
 
-    // If server returns fallback signal, use Web Speech API
     if(res.headers.get('content-type')?.includes('application/json')){
       const data=await res.json();
       if(data.fallback) return speakWebSpeech(text);
@@ -394,21 +401,12 @@ async function speak(text){
     const blob=await res.blob();
     const url=URL.createObjectURL(blob);
     currentAudio=new Audio(url);
-
-    currentAudio.onended=()=>{
-      URL.revokeObjectURL(url);
-      currentAudio=null;
-      onAgentFinished();
-    };
-    currentAudio.onerror=()=>{
-      currentAudio=null;
-      onAgentFinished();
-    };
-
+    currentAudio.onended=()=>{ URL.revokeObjectURL(url); currentAudio=null; onAgentFinished(); };
+    currentAudio.onerror=()=>{ currentAudio=null; onAgentFinished(); };
     await currentAudio.play();
 
   } catch(e){
-    console.warn('TTS fetch failed, using Web Speech fallback:', e.message);
+    console.warn('TTS fetch failed, using Web Speech fallback');
     speakWebSpeech(text);
   }
 }
@@ -431,38 +429,11 @@ function speakWebSpeech(text){
 }
 
 function onAgentFinished(){
-  // Agent finished speaking naturally
   safeStopBarge();
   currentAudio=null;
-  // Apply cooldown before accepting operator input (prevents echo of last words)
   cooldownUntil=Date.now()+COOLDOWN_MS;
-  if(micActive){
-    setPhase('listening');
-    safeStartMain();
-  } else {
-    setPhase('idle');
-  }
-}
-
-function stopAgent(thenRepeat){
-  // Stop audio
-  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
-  window.speechSynthesis&&window.speechSynthesis.cancel();
-  // Stop barge-in recognition
-  safeStopBarge();
-  // Apply cooldown
-  cooldownUntil=Date.now()+COOLDOWN_MS;
-
-  if(thenRepeat&&lastAgentText){
-    setTimeout(()=>speak(lastAgentText),300);
-  } else {
-    if(micActive){
-      setPhase('listening');
-      safeStartMain();
-    } else {
-      setPhase('idle');
-    }
-  }
+  if(micActive){ setPhase('listening'); safeStartMain(); }
+  else setPhase('idle');
 }
 
 // ─── QUERY ────────────────────────────────────────────────────────────────────
@@ -515,8 +486,7 @@ function setPhase(p){
   const stopBtn  =document.getElementById('stop-btn');
   const bargeHint=document.getElementById('barge-hint');
 
-  // 'barge' is a visual sub-state for when bargeRec is active during speaking
-  const visual = (p==='speaking'&&micActive) ? 'barge' : p;
+  const visual=(p==='speaking'&&micActive)?'barge':p;
 
   micBtn.className  ='mic-btn '+visual;
   micWrap.className ='mic-wrap '+visual;
@@ -529,7 +499,7 @@ function setPhase(p){
     idle:       'Press mic or type to begin',
     listening:  'Listening...',
     processing: 'Processing...',
-    speaking:   micActive ? 'Speaking — say "stop" to interrupt' : 'Speaking...'
+    speaking:   micActive?'Speaking — say "stop" to interrupt':'Speaking...'
   };
   const sl=document.getElementById('status-label');
   sl.textContent=labels[p]||'Ready';
