@@ -68,11 +68,16 @@ const manualData = {
 
 let lastResponse = 'No previous response to repeat.';
 
-// ---- REPLY HELPER ----
+// ---- HELPERS ----
 
 function reply(res, text) {
   lastResponse = text;
   res.json({ fulfillmentText: text });
+}
+
+function extractParam(params, key) {
+  const val = params[key];
+  return Array.isArray(val) ? val[0] : val;
 }
 
 // ---- WEBHOOK HANDLER ----
@@ -82,7 +87,7 @@ app.post('/webhook', (req, res) => {
   const params = req.body.queryResult.parameters;
 
   if (intent === 'outage-status') {
-    const zone = params['zone'];
+    const zone = extractParam(params, 'zone');
     if (zone && outageData[zone]) {
       const d = outageData[zone];
       if (d.status === 'outage') {
@@ -98,14 +103,14 @@ app.post('/webhook', (req, res) => {
     }
 
   } else if (intent === 'outage-status - report-incident') {
-    const zone = params['zone'] || 'the affected zone';
-    const type = params['incident-type'] || 'Power Outage';
+    const zone = extractParam(params, 'zone') || 'the affected zone';
+    const type = extractParam(params, 'incident-type') || 'Power Outage';
     const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
     const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
     reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: High. Time: ' + time + '.');
 
   } else if (intent === 'equipment-status') {
-    const eq = params['equipment-id'];
+    const eq = extractParam(params, 'equipment-id');
     if (eq && equipmentData[eq]) {
       const d = equipmentData[eq];
       if (d.status === 'fault') {
@@ -120,18 +125,18 @@ app.post('/webhook', (req, res) => {
     }
 
   } else if (intent === 'incident-reporting') {
-    const zone = params['zone'];
-    const type = params['incident-type'];
-    const severity = params['severity'] || 'Medium';
+    const zone = extractParam(params, 'zone');
+    const type = extractParam(params, 'incident-type');
+    const severity = extractParam(params, 'severity') || 'Medium';
     const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
     const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
     reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: ' + severity + '. Time: ' + time + '.');
 
   } else if (intent === 'emergency-procedures') {
-    const rawType = params['procedure-type'];
+    const rawType = extractParam(params, 'procedure-type');
     const type = Object.keys(procedureData).find(k => k.toLowerCase() === (rawType || '').toLowerCase());
     reply(res, type ? procedureData[type] : 'Please specify: Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
-    
+
   } else if (intent === 'emergency-procedures - next-step') {
     reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Do you need me to repeat any step?');
 
@@ -139,7 +144,7 @@ app.post('/webhook', (req, res) => {
     reply(res, 'Available resources: Generator G-3 on standby, fuel 87%. Three maintenance technicians on call. One spare transformer in storage. Emergency vehicle available.');
 
   } else if (intent === 'contact-directory') {
-    const shift = params['shift-period'] || 'Current Shift';
+    const shift = extractParam(params, 'shift-period') || 'Current Shift';
     const d = contactData[shift];
     if (d) {
       const name = d.supervisor || d.name || d.lead;
@@ -149,7 +154,7 @@ app.post('/webhook', (req, res) => {
     }
 
   } else if (intent === 'safety-protocols') {
-    const zone = params['zone'];
+    const zone = extractParam(params, 'zone');
     const z = zone ? ' for ' + zone : '';
     reply(res, 'Safety protocols' + z + ': 1) Wear correct PPE. 2) Apply lockout and tagout before maintenance. 3) Never enter high voltage areas alone. 4) Report all hazards immediately.');
 
@@ -163,12 +168,12 @@ app.post('/webhook', (req, res) => {
     }
 
   } else if (intent === 'shift-information') {
-    const shift = params['shift-period'] || 'Current Shift';
+    const shift = extractParam(params, 'shift-period') || 'Current Shift';
     const d = shiftData[shift] || shiftData['Current Shift'];
     reply(res, shift + ': ' + d.type + ' shift. ' + d.start + ' to ' + d.end + '. Crew: ' + d.crew + '. Supervisor: ' + d.supervisor + '.');
 
   } else if (intent === 'equipment-manuals') {
-    const eq = params['equipment-id'];
+    const eq = extractParam(params, 'equipment-id');
     reply(res, manualData[eq] || 'Manual not found. Contact maintenance on Extension 4420.');
 
   } else if (intent === 'repeat-last') {
