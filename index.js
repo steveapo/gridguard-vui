@@ -47,12 +47,12 @@ const shiftData = {
 };
 
 const procedureData = {
-  "Evacuation": "Step 1: Sound the evacuation alarm. Step 2: Direct all personnel to the nearest muster point. Step 3: Account for all staff using the shift roster. Ready for Step 2?",
-  "Transformer Fire": "Step 1: Isolate the transformer using the manual disconnect switch. Step 2: Activate the CO2 suppression system. Step 3: Contact the fire brigade. Ready for Step 2?",
-  "Gas Leak Response": "Step 1: Evacuate the affected area immediately. Step 2: Do not use any electrical switches. Step 3: Call the gas emergency line. Ready for Step 2?",
-  "Electrical Isolation": "Step 1: Identify the correct isolation point on the single-line diagram. Step 2: Apply lockout and tagout. Step 3: Verify isolation using a voltage tester. Ready for Step 2?",
-  "Flood Response": "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps. Step 3: Notify the facility manager. Ready for Step 2?",
-  "First Aid": "Step 1: Make sure the scene is safe before approaching. Step 2: Call the on-site first aider on Extension 4430. Step 3: Do not move the injured person unless in immediate danger. Ready for Step 2?"
+  "Evacuation": "Step 1: Sound the evacuation alarm. Step 2: Direct all personnel to the nearest muster point. Step 3: Account for all staff using the shift roster.",
+  "Transformer Fire": "Step 1: Isolate the transformer using the manual disconnect switch. Step 2: Activate the CO2 suppression system. Step 3: Contact the fire brigade.",
+  "Gas Leak Response": "Step 1: Evacuate the affected area immediately. Step 2: Do not use any electrical switches. Step 3: Call the gas emergency line.",
+  "Electrical Isolation": "Step 1: Identify the correct isolation point on the single-line diagram. Step 2: Apply lockout and tagout. Step 3: Verify isolation using a voltage tester.",
+  "Flood Response": "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps. Step 3: Notify the facility manager.",
+  "First Aid": "Step 1: Make sure the scene is safe before approaching. Step 2: Call the on-site first aider on Extension 4430. Step 3: Do not move the injured person unless in immediate danger."
 };
 
 const manualData = {
