@@ -95,38 +95,21 @@ function extractParam(params, key) {
 async function callDialogflow(text, sessionId) {
   const credentialsRaw = process.env.GOOGLE_CREDENTIALS;
   const projectId = process.env.DIALOGFLOW_PROJECT_ID;
-
-  if (!credentialsRaw || !projectId) {
-    throw new Error('GOOGLE_CREDENTIALS or DIALOGFLOW_PROJECT_ID not set.');
-  }
+  if (!credentialsRaw || !projectId) throw new Error('GOOGLE_CREDENTIALS or DIALOGFLOW_PROJECT_ID not set.');
 
   const { GoogleAuth } = require('google-auth-library');
   const credentials = JSON.parse(credentialsRaw);
-  const auth = new GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/dialogflow']
-  });
+  const auth = new GoogleAuth({ credentials, scopes: ['https://www.googleapis.com/auth/dialogflow'] });
   const accessToken = await auth.getAccessToken();
 
   const url = `https://europe-west1-dialogflow.googleapis.com/v2/projects/${projectId}/locations/europe-west1/agent/sessions/${sessionId}:detectIntent`;
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      queryInput: {
-        text: { text, languageCode: 'en' }
-      }
-    })
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ queryInput: { text: { text, languageCode: 'en' } } })
   });
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Dialogflow API error: ${err}`);
-  }
-
+  if (!response.ok) throw new Error(`Dialogflow API error: ${await response.text()}`);
   return response.json();
 }
 
@@ -138,11 +121,7 @@ async function enhanceWithClaude(fulfillmentText) {
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json'
-    },
+    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 300,
@@ -179,7 +158,60 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// ---- STATUS ENDPOINT (for frontend data panels) ----
+// ---- /tts ENDPOINT — Azure Neural TTS ----
+
+app.post('/tts', async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'No text provided' });
+
+  const azureKey    = process.env.AZURE_TTS_KEY;
+  const azureRegion = process.env.AZURE_TTS_REGION;
+
+  // Fallback signal — client will use Web Speech API instead
+  if (!azureKey || !azureRegion) {
+    return res.status(200).json({ fallback: true });
+  }
+
+  try {
+    const ssml = `<speak version='1.0' xml:lang='en-US'>
+      <voice xml:lang='en-US' xml:gender='Male' name='en-US-GuyNeural'>
+        <prosody rate='-5%' pitch='-8%'>
+          ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+        </prosody>
+      </voice>
+    </speak>`;
+
+    const ttsRes = await fetch(
+      `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'application/ssml+xml',
+          'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3'
+        },
+        body: ssml
+      }
+    );
+
+    if (!ttsRes.ok) {
+      const errText = await ttsRes.text();
+      console.error('Azure TTS error:', errText);
+      return res.status(200).json({ fallback: true });
+    }
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'no-store');
+    const buffer = await ttsRes.arrayBuffer();
+    res.send(Buffer.from(buffer));
+
+  } catch (err) {
+    console.error('TTS error:', err.message);
+    res.status(200).json({ fallback: true });
+  }
+});
+
+// ---- /status ENDPOINT ----
 
 app.get('/status', (req, res) => {
   res.json({ outageData, equipmentData, weatherData, shiftData });
