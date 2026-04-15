@@ -186,6 +186,7 @@
       </div>
       <div class="status-label" id="status-label">Press mic or type to begin</div>
       <div class="barge-hint" id="barge-hint">say "stop" or "repeat" to interrupt</div>
+      <!-- STOP BUTTON: kills audio + mic -->
       <button class="stop-btn" id="stop-btn" onclick="stopAndKillMic()">■ STOP</button>
     </div>
     <div class="input-row">
@@ -199,8 +200,8 @@
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let micActive     = false;
 let phase         = 'idle';
-let mainRec       = null;
-let bargeRec      = null;
+let mainRec       = null;         // normal operator input
+let bargeRec      = null;         // keyword-only during speaking
 let mainRunning   = false;
 let bargeRunning  = false;
 let speechSupported = false;
@@ -211,6 +212,7 @@ let interimText   = '';
 let pendingQuery  = false;
 let currentAudio  = null;
 let cooldownUntil = 0;
+let bargeHandling = false;        // prevents duplicate barge-in triggers
 
 const STOP_WORDS   = ['stop','halt','quiet','silence','enough'];
 const REPEAT_WORDS = ['repeat','repeat that','say that again','again','what did you say'];
@@ -234,7 +236,7 @@ function initSpeech(){
   if(!SR){ setLabel('idle','Voice unavailable — use text input'); return; }
   speechSupported=true;
 
-  // ── MAIN RECOGNITION — operator input ────────────────────────────────────
+  // ── MAIN RECOGNITION — operator queries ──────────────────────────────────
   mainRec=new SR();
   mainRec.continuous=true;
   mainRec.interimResults=true;
@@ -278,7 +280,7 @@ function initSpeech(){
     if(micActive&&phase!=='speaking') safeStartMain();
   };
 
-  // ── BARGE-IN RECOGNITION — keyword-only during speaking ──────────────────
+  // ── BARGE-IN RECOGNITION — keyword only, runs during speaking ────────────
   bargeRec=new SR();
   bargeRec.continuous=true;
   bargeRec.interimResults=true;
@@ -288,13 +290,28 @@ function initSpeech(){
 
   bargeRec.onresult=(e)=>{
     if(phase!=='speaking') return;
+    if(bargeHandling) return;       // already handling a barge-in, ignore duplicates
+
     let combined='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       combined+=e.results[i][0].transcript.toLowerCase()+' ';
     }
-    if(STOP_WORDS.some(w=>combined.includes(w))){ stopAndKillMic(); return; }
-    if(REPEAT_WORDS.some(w=>combined.includes(w))){ stopAgent(true); return; }
-    // All other speech silently discarded
+
+    // STOP voice command — stops audio, keeps mic alive
+    if(STOP_WORDS.some(w=>combined.includes(w))){
+      bargeHandling=true;
+      stopAgent(false);             // keeps micActive unchanged
+      return;
+    }
+
+    // REPEAT voice command — stops current audio then replays
+    if(REPEAT_WORDS.some(w=>combined.includes(w))){
+      bargeHandling=true;
+      stopAgent(true);              // stops then replays lastAgentText
+      return;
+    }
+
+    // All other speech silently discarded — never sent to agent
   };
 
   bargeRec.onerror=(e)=>{
@@ -311,18 +328,12 @@ function initSpeech(){
 
 function safeStartMain(){
   if(!speechSupported||!micActive||mainRunning||phase==='speaking') return;
-  setTimeout(()=>{
-    if(!micActive||mainRunning||phase==='speaking') return;
-    try{ mainRec.start(); }catch(e){}
-  },120);
+  setTimeout(()=>{ if(!micActive||mainRunning||phase==='speaking') return; try{ mainRec.start(); }catch(e){} },120);
 }
 
 function safeStartBarge(){
   if(!speechSupported||!micActive||bargeRunning) return;
-  setTimeout(()=>{
-    if(!micActive||bargeRunning) return;
-    try{ bargeRec.start(); }catch(e){}
-  },120);
+  setTimeout(()=>{ if(!micActive||bargeRunning) return; try{ bargeRec.start(); }catch(e){} },120);
 }
 
 function safeStopMain(){ if(!mainRunning) return; try{ mainRec.stop(); }catch(e){} }
@@ -345,21 +356,19 @@ function handleMicClick(){
   }
 }
 
-// ─── STOP BUTTON — kills audio AND mic ───────────────────────────────────────
+// ─── STOP BUTTON — kills audio AND mic completely ─────────────────────────────
 function stopAndKillMic(){
-  // Kill audio
   if(currentAudio){ currentAudio.pause(); currentAudio=null; }
   window.speechSynthesis&&window.speechSynthesis.cancel();
-  // Kill both recognition instances
   safeStopBarge();
   safeStopMain();
-  // Kill mic state
   micActive=false;
+  bargeHandling=false;
   cooldownUntil=Date.now()+COOLDOWN_MS;
   setPhase('idle');
 }
 
-// ─── STOP AGENT (repeat path — keeps mic alive) ───────────────────────────────
+// ─── STOP AGENT — stops audio, optionally replays, mic stays as-is ───────────
 function stopAgent(thenRepeat){
   if(currentAudio){ currentAudio.pause(); currentAudio=null; }
   window.speechSynthesis&&window.speechSynthesis.cancel();
@@ -367,21 +376,23 @@ function stopAgent(thenRepeat){
   cooldownUntil=Date.now()+COOLDOWN_MS;
 
   if(thenRepeat&&lastAgentText){
-    setTimeout(()=>speak(lastAgentText),300);
+    // Small gap ensures previous audio fully cancelled before new one starts
+    setTimeout(()=>{ bargeHandling=false; speak(lastAgentText); },350);
   } else {
-    if(micActive){
-      setPhase('listening');
-      safeStartMain();
-    } else {
-      setPhase('idle');
-    }
+    bargeHandling=false;
+    if(micActive){ setPhase('listening'); safeStartMain(); }
+    else setPhase('idle');
   }
 }
 
 // ─── TTS — Azure Neural with Web Speech fallback ──────────────────────────────
 async function speak(text){
+  // Reset barge guard for this new response
+  bargeHandling=false;
+
   if(currentAudio){ currentAudio.pause(); currentAudio=null; }
   window.speechSynthesis&&window.speechSynthesis.cancel();
+
   safeStopMain();
   setPhase('speaking');
   if(micActive) safeStartBarge();
@@ -406,7 +417,7 @@ async function speak(text){
     await currentAudio.play();
 
   } catch(e){
-    console.warn('TTS fetch failed, using Web Speech fallback');
+    console.warn('TTS failed, fallback to Web Speech');
     speakWebSpeech(text);
   }
 }
@@ -422,7 +433,7 @@ function speakWebSpeech(text){
            voices.find(v=>v.lang==='en-GB')||
            voices.find(v=>v.lang==='en-US')||voices[0];
   if(v) utt.voice=v;
-  utt.rate=0.92; utt.pitch=0.90; utt.volume=1;
+  utt.rate=1.05; utt.pitch=0.90; utt.volume=1;
   utt.onend=()=>onAgentFinished();
   utt.onerror=()=>onAgentFinished();
   window.speechSynthesis.speak(utt);
@@ -431,6 +442,7 @@ function speakWebSpeech(text){
 function onAgentFinished(){
   safeStopBarge();
   currentAudio=null;
+  bargeHandling=false;
   cooldownUntil=Date.now()+COOLDOWN_MS;
   if(micActive){ setPhase('listening'); safeStartMain(); }
   else setPhase('idle');
@@ -499,7 +511,7 @@ function setPhase(p){
     idle:       'Press mic or type to begin',
     listening:  'Listening...',
     processing: 'Processing...',
-    speaking:   micActive?'Speaking — say "stop" to interrupt':'Speaking...'
+    speaking:   micActive?'Speaking — say "stop" or "repeat" to interrupt':'Speaking...'
   };
   const sl=document.getElementById('status-label');
   sl.textContent=labels[p]||'Ready';
