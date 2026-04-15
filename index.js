@@ -1,6 +1,7 @@
 'use strict';
 const express = require('express');
 const path = require('path');
+const { Readable } = require('stream');
 const app = express();
 
 app.use(express.json());
@@ -158,7 +159,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// ---- /tts ENDPOINT — Azure Neural TTS (en-US-AndrewMultilingualNeural) ----
+// ---- /tts ENDPOINT — Azure Neural TTS streamed ----
 
 app.post('/tts', async (req, res) => {
   const { text } = req.body;
@@ -174,7 +175,7 @@ app.post('/tts', async (req, res) => {
   try {
     const ssml = `<speak version='1.0' xml:lang='en-US'>
       <voice name='en-US-AndrewMultilingualNeural'>
-        <prosody rate='-5%' pitch='-6%'>
+        <prosody rate='+10%' pitch='-3%'>
           ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
         </prosody>
       </voice>
@@ -200,8 +201,7 @@ app.post('/tts', async (req, res) => {
 
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'no-store');
-    const buffer = await ttsRes.arrayBuffer();
-    res.send(Buffer.from(buffer));
+    Readable.fromWeb(ttsRes.body).pipe(res);
 
   } catch (err) {
     console.error('TTS error:', err.message);
