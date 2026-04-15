@@ -108,7 +108,7 @@ async function callDialogflow(text, sessionId) {
   });
   const accessToken = await auth.getAccessToken();
 
-  const url = `https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`;
+  const url = `https://europe-west1-dialogflow.googleapis.com/v2/projects/${projectId}/locations/europe-west1/agent/sessions/${sessionId}:detectIntent`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
