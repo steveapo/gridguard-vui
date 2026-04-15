@@ -36,13 +36,13 @@ const equipmentData = {
 };
 
 const contactData = {
-  "Current Shift": { supervisor: "Ahmed Karim", extension: "4412" },
-  "Morning Shift": { supervisor: "Maria Santos", extension: "4401" },
-  "Evening Shift": { supervisor: "Nikos Papadopoulos", extension: "4407" },
-  "Night Shift": { supervisor: "Elena Volkov", extension: "4415" },
-  "Safety Officer": { name: "James Osei", extension: "4430" },
-  "Maintenance Team": { lead: "Yusuf Al-Rashid", extension: "4420" },
-  "Emergency Hotline": { number: "0800-GRIDGUARD" }
+  "Current Shift":    { supervisor: "Ahmed Karim",         extension: "4412" },
+  "Morning Shift":    { supervisor: "Maria Santos",         extension: "4401" },
+  "Evening Shift":    { supervisor: "Nikos Papadopoulos",   extension: "4407" },
+  "Night Shift":      { supervisor: "Elena Volkov",         extension: "4415" },
+  "Safety Officer":   { name: "James Osei",                 extension: "4430" },
+  "Maintenance Team": { lead: "Yusuf Al-Rashid",            extension: "4420" },
+  "Emergency Hotline":{ number: "0800-GRIDGUARD" }
 };
 
 const weatherData = {
@@ -54,24 +54,24 @@ const shiftData = {
   "Current Shift": { type: "Evening", start: "14:00", end: "22:00", crew: 8, supervisor: "Nikos Papadopoulos" },
   "Morning Shift": { type: "Morning", start: "06:00", end: "14:00", crew: 6, supervisor: "Maria Santos" },
   "Evening Shift": { type: "Evening", start: "14:00", end: "22:00", crew: 8, supervisor: "Nikos Papadopoulos" },
-  "Night Shift": { type: "Night", start: "22:00", end: "06:00", crew: 4, supervisor: "Elena Volkov" }
+  "Night Shift":   { type: "Night",   start: "22:00", end: "06:00", crew: 4, supervisor: "Elena Volkov" }
 };
 
 const procedureData = {
-  "Evacuation": "Step 1: Sound the evacuation alarm. Step 2: Direct all personnel to the nearest muster point. Step 3: Account for all staff using the shift roster. Ready for Step 2?",
-  "Transformer Fire": "Step 1: Isolate the transformer using the manual disconnect switch. Step 2: Activate the CO2 suppression system. Step 3: Contact the fire brigade. Ready for Step 2?",
-  "Gas Leak Response": "Step 1: Evacuate the affected area immediately. Step 2: Do not use any electrical switches. Step 3: Call the gas emergency line. Ready for Step 2?",
+  "Evacuation":           "Step 1: Sound the evacuation alarm. Step 2: Direct all personnel to the nearest muster point. Step 3: Account for all staff using the shift roster. Ready for Step 2?",
+  "Transformer Fire":     "Step 1: Isolate the transformer using the manual disconnect switch. Step 2: Activate the CO2 suppression system. Step 3: Contact the fire brigade. Ready for Step 2?",
+  "Gas Leak Response":    "Step 1: Evacuate the affected area immediately. Step 2: Do not use any electrical switches. Step 3: Call the gas emergency line. Ready for Step 2?",
   "Electrical Isolation": "Step 1: Identify the correct isolation point on the single-line diagram. Step 2: Apply lockout and tagout. Step 3: Verify isolation using a voltage tester. Ready for Step 2?",
-  "Flood Response": "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps. Step 3: Notify the facility manager. Ready for Step 2?",
-  "First Aid": "Step 1: Make sure the scene is safe before approaching. Step 2: Call the on-site first aider on Extension 4430. Step 3: Do not move the injured person unless in immediate danger. Ready for Step 2?"
+  "Flood Response":       "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps. Step 3: Notify the facility manager. Ready for Step 2?",
+  "First Aid":            "Step 1: Make sure the scene is safe before approaching. Step 2: Call the on-site first aider on Extension 4430. Step 3: Do not move the injured person unless in immediate danger. Ready for Step 2?"
 };
 
 const manualData = {
   "Transformer T-12": "Manual reference TM-T12-v4. Section 3 covers operation. Section 7 covers fault isolation. Digital copy in /manuals/transformers/",
   "Transformer T-07": "Manual reference TM-T07-v3. Section 3 covers operation. Section 7 covers fault isolation. Digital copy in /manuals/transformers/",
-  "Generator G-3": "Manual reference GM-G3-v2. Section 4 covers startup procedure. Section 9 covers emergency shutdown. Digital copy in /manuals/generators/",
-  "Feeder Line B-7": "Manual reference FL-B7-v1. Section 2 covers voltage parameters. Section 5 covers fault recovery. Digital copy in /manuals/feeders/",
-  "Switchgear SW-4": "Manual reference SW-SW4-v3. Section 6 covers maintenance schedule. Digital copy in /manuals/switchgear/",
+  "Generator G-3":    "Manual reference GM-G3-v2. Section 4 covers startup procedure. Section 9 covers emergency shutdown. Digital copy in /manuals/generators/",
+  "Feeder Line B-7":  "Manual reference FL-B7-v1. Section 2 covers voltage parameters. Section 5 covers fault recovery. Digital copy in /manuals/feeders/",
+  "Switchgear SW-4":  "Manual reference SW-SW4-v3. Section 6 covers maintenance schedule. Digital copy in /manuals/switchgear/",
   "Pump Station P-1": "Manual reference PS-P1-v2. Section 3 covers operating pressure. Digital copy in /manuals/pumps/"
 };
 
@@ -282,9 +282,16 @@ app.post('/webhook', (req, res) => {
     const shift = extractParam(params, 'shift-period') || 'Current Shift';
     const d = contactData[shift];
     if (d) {
-      const name = d.supervisor || d.name || d.lead;
-      reply(res, shift + ': ' + name + '. Extension: ' + d.extension + '.');
+      // Emergency Hotline — returns a number, not a name/extension
+      if (d.number) {
+        reply(res, 'Emergency hotline: ' + d.number + '.');
+      // Safety Officer or Maintenance Team lead
+      } else {
+        const name = d.supervisor || d.name || d.lead;
+        reply(res, shift + ': ' + name + '. Extension: ' + d.extension + '.');
+      }
     } else {
+      // No entity extracted — return current shift summary plus hotline
       reply(res, 'Current supervisor: ' + contactData['Current Shift'].supervisor + '. Extension: ' + contactData['Current Shift'].extension + '. Emergency hotline: ' + contactData['Emergency Hotline'].number + '.');
     }
 
