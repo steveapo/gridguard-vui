@@ -158,7 +158,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// ---- /tts ENDPOINT — Azure Neural TTS ----
+// ---- /tts ENDPOINT — Azure Neural TTS (en-US-AndrewMultilingualNeural) ----
 
 app.post('/tts', async (req, res) => {
   const { text } = req.body;
@@ -167,15 +167,14 @@ app.post('/tts', async (req, res) => {
   const azureKey    = process.env.AZURE_TTS_KEY;
   const azureRegion = process.env.AZURE_TTS_REGION;
 
-  // Fallback signal — client will use Web Speech API instead
   if (!azureKey || !azureRegion) {
     return res.status(200).json({ fallback: true });
   }
 
   try {
     const ssml = `<speak version='1.0' xml:lang='en-US'>
-      <voice xml:lang='en-US' xml:gender='Male' name='en-US-GuyNeural'>
-        <prosody rate='-5%' pitch='-8%'>
+      <voice name='en-US-AndrewMultilingualNeural'>
+        <prosody rate='-5%' pitch='-6%'>
           ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
         </prosody>
       </voice>
@@ -195,8 +194,7 @@ app.post('/tts', async (req, res) => {
     );
 
     if (!ttsRes.ok) {
-      const errText = await ttsRes.text();
-      console.error('Azure TTS error:', errText);
+      console.error('Azure TTS error:', await ttsRes.text());
       return res.status(200).json({ fallback: true });
     }
 
@@ -315,6 +313,9 @@ app.post('/webhook', (req, res) => {
 
   } else if (intent === 'repeat-last') {
     reply(res, lastResponse);
+
+  } else if (intent === 'agent-capabilities') {
+    reply(res, 'I can help with ten query types: outage status, equipment status, incident reporting, emergency procedures, resource availability, contact directory, safety protocols, weather alerts, shift information, and equipment manuals. Which do you need?');
 
   } else {
     reply(res, 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.');
