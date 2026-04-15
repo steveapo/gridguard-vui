@@ -1,7 +1,17 @@
 'use strict';
 const express = require('express');
+const path = require('path');
 const app = express();
+
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 
 // ---- STATIC DATA ----
 
@@ -47,12 +57,12 @@ const shiftData = {
 };
 
 const procedureData = {
-  "Evacuation": "Step 1: Sound the evacuation alarm. Step 2: Direct all personnel to the nearest muster point. Step 3: Account for all staff using the shift roster.",
-  "Transformer Fire": "Step 1: Isolate the transformer using the manual disconnect switch. Step 2: Activate the CO2 suppression system. Step 3: Contact the fire brigade.",
-  "Gas Leak Response": "Step 1: Evacuate the affected area immediately. Step 2: Do not use any electrical switches. Step 3: Call the gas emergency line.",
-  "Electrical Isolation": "Step 1: Identify the correct isolation point on the single-line diagram. Step 2: Apply lockout and tagout. Step 3: Verify isolation using a voltage tester.",
-  "Flood Response": "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps. Step 3: Notify the facility manager.",
-  "First Aid": "Step 1: Make sure the scene is safe before approaching. Step 2: Call the on-site first aider on Extension 4430. Step 3: Do not move the injured person unless in immediate danger."
+  "Evacuation": "Step 1: Sound the evacuation alarm. Step 2: Direct all personnel to the nearest muster point. Step 3: Account for all staff using the shift roster. Ready for Step 2?",
+  "Transformer Fire": "Step 1: Isolate the transformer using the manual disconnect switch. Step 2: Activate the CO2 suppression system. Step 3: Contact the fire brigade. Ready for Step 2?",
+  "Gas Leak Response": "Step 1: Evacuate the affected area immediately. Step 2: Do not use any electrical switches. Step 3: Call the gas emergency line. Ready for Step 2?",
+  "Electrical Isolation": "Step 1: Identify the correct isolation point on the single-line diagram. Step 2: Apply lockout and tagout. Step 3: Verify isolation using a voltage tester. Ready for Step 2?",
+  "Flood Response": "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps. Step 3: Notify the facility manager. Ready for Step 2?",
+  "First Aid": "Step 1: Make sure the scene is safe before approaching. Step 2: Call the on-site first aider on Extension 4430. Step 3: Do not move the injured person unless in immediate danger. Ready for Step 2?"
 };
 
 const manualData = {
@@ -79,6 +89,101 @@ function extractParam(params, key) {
   const val = params[key];
   return Array.isArray(val) ? val[0] : val;
 }
+
+// ---- DIALOGFLOW REST CALL ----
+
+async function callDialogflow(text, sessionId) {
+  const credentialsRaw = process.env.GOOGLE_CREDENTIALS;
+  const projectId = process.env.DIALOGFLOW_PROJECT_ID;
+
+  if (!credentialsRaw || !projectId) {
+    throw new Error('GOOGLE_CREDENTIALS or DIALOGFLOW_PROJECT_ID not set.');
+  }
+
+  const { GoogleAuth } = require('google-auth-library');
+  const credentials = JSON.parse(credentialsRaw);
+  const auth = new GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/dialogflow']
+  });
+  const accessToken = await auth.getAccessToken();
+
+  const url = `https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      queryInput: {
+        text: { text, languageCode: 'en' }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Dialogflow API error: ${err}`);
+  }
+
+  return response.json();
+}
+
+// ---- CLAUDE ENHANCEMENT ----
+
+async function enhanceWithClaude(fulfillmentText) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return fulfillmentText;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are GridGuard, an AI voice assistant for emergency response in an energy utility control room. Rephrase the response below to sound more natural and human while following these strict rules:
+1. Never change any factual data — numbers, names, zones, ETAs must remain identical
+2. Keep responses concise — operators work under pressure and need fast answers
+3. Maintain a calm, authoritative tone — never casual or overly warm
+4. No greetings, closings, or filler phrases like "certainly" or "of course"
+5. Output only the rephrased response text — nothing else`,
+      messages: [{ role: 'user', content: fulfillmentText }]
+    })
+  });
+
+  if (!response.ok) return fulfillmentText;
+  const data = await response.json();
+  return data.content?.[0]?.text || fulfillmentText;
+}
+
+// ---- /chat ENDPOINT ----
+
+app.post('/chat', async (req, res) => {
+  const { text, sessionId } = req.body;
+  if (!text) return res.status(400).json({ error: 'No text provided' });
+
+  try {
+    const dfResult = await callDialogflow(text, sessionId || 'web-session-001');
+    const rawResponse = dfResult.queryResult?.fulfillmentText || 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.';
+    const intent = dfResult.queryResult?.intent?.displayName || 'unknown';
+    const enhanced = await enhanceWithClaude(rawResponse);
+    res.json({ response: enhanced, intent, raw: rawResponse });
+  } catch (err) {
+    console.error('Chat error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- STATUS ENDPOINT (for frontend data panels) ----
+
+app.get('/status', (req, res) => {
+  res.json({ outageData, equipmentData, weatherData, shiftData });
+});
 
 // ---- WEBHOOK HANDLER ----
 
