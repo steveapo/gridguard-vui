@@ -15,9 +15,9 @@
       --user-text:#b0b0b0;--agent-text:#f0f0f0;
       --hint-border:#1e1e1e;--hint-text:#666;
       --topbar-bg:#0a0a0a;--card-bg:#111;--card-border:#1e1e1e;
-      --input-bg:#161616;--input-border:#333;--input-text:#f0f0f0;--input-ph:#444;
+      --input-bg:#1a1a1a;--input-border:#3a3a3a;--input-text:#f0f0f0;--input-ph:#484848;
       --btn-bg:#161616;--btn-border:#333;--btn-text:#909090;--mic-idle:#d0d0d0;
-      --mic-ring:rgba(240,240,240,0.08);--stop-bg:rgba(248,113,113,0.1);--stop-border:#f87171;--stop-text:#f87171;
+      --mic-ring:rgba(240,240,240,0.06);--stop-bg:rgba(248,113,113,0.1);--stop-border:#f87171;--stop-text:#f87171;
     }
     [data-theme="white"] {
       --bg:#f8f8f6;--surface:#fff;--surface-hi:#f2f2f0;--border:#e0e0dc;--border-hi:#ccc;
@@ -28,7 +28,7 @@
       --topbar-bg:#fff;--card-bg:#fff;--card-border:#e0e0dc;
       --input-bg:#fff;--input-border:#ccc;--input-text:#111;--input-ph:#bbb;
       --btn-bg:#f0f0ee;--btn-border:#ccc;--btn-text:#555;--mic-idle:#333;
-      --mic-ring:rgba(0,0,0,0.06);--stop-bg:rgba(220,38,38,0.08);--stop-border:#dc2626;--stop-text:#dc2626;
+      --mic-ring:rgba(0,0,0,0.05);--stop-bg:rgba(220,38,38,0.08);--stop-border:#dc2626;--stop-text:#dc2626;
     }
     [data-theme="soft"] {
       --bg:#141824;--surface:#1c2236;--surface-hi:#222a42;--border:#242e4a;--border-hi:#2e3c60;
@@ -39,23 +39,24 @@
       --topbar-bg:#0e1220;--card-bg:#1a2038;--card-border:#222e4c;
       --input-bg:#1c2236;--input-border:#2e3c60;--input-text:#e4ebf8;--input-ph:#3a4a6a;
       --btn-bg:#1c2236;--btn-border:#2e3c60;--btn-text:#7a90bc;--mic-idle:#e4ebf8;
-      --mic-ring:rgba(228,235,248,0.06);--stop-bg:rgba(248,113,113,0.1);--stop-border:#f87171;--stop-text:#f87171;
+      --mic-ring:rgba(228,235,248,0.05);--stop-bg:rgba(248,113,113,0.1);--stop-border:#f87171;--stop-text:#f87171;
     }
 
     html,body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-weight:300; overflow:hidden; transition:background .3s,color .3s; }
 
-    /* ── LAYOUT ─────────────────────────────────────────────────────────────── */
-    .app {
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      grid-template-rows: 64px 1fr 72px 96px;
+    /* ── PAGE SHELL ─────────────────────────────────────────────────────────── */
+    /* Outer shell: full viewport, column layout */
+    .shell {
+      display: flex;
+      flex-direction: column;
       height: 100vh;
+      width: 100vw;
     }
 
-    /* ── TOPBAR ─────────────────────────────────────────────────────────────── */
+    /* TOPBAR */
     .topbar {
-      grid-column: 1/-1;
-      grid-row: 1;
+      flex-shrink: 0;
+      height: 64px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -63,11 +64,8 @@
       background: var(--topbar-bg);
       border-bottom: 1px solid var(--border);
     }
-
     .wordmark { font-family:'DM Mono',monospace; font-size:15px; font-weight:500; letter-spacing:.24em; color:var(--text); }
-
     .topbar-right { display:flex; align-items:center; gap:24px; }
-
     .theme-switcher { display:flex; gap:6px; }
     .theme-btn { width:22px; height:22px; border-radius:50%; border:2px solid transparent; cursor:pointer; transition:border-color .2s,transform .15s; }
     .theme-btn:hover { transform:scale(1.2); }
@@ -75,14 +73,20 @@
     .theme-btn[data-t="dark"]  { background:#0d0d0d; box-shadow:inset 0 0 0 1px #333; }
     .theme-btn[data-t="white"] { background:#f8f8f6; box-shadow:inset 0 0 0 1px #ccc; }
     .theme-btn[data-t="soft"]  { background:#141824; box-shadow:inset 0 0 0 1px #2e3c60; }
-
     .meta-item { font-family:'DM Mono',monospace; font-size:12px; color:var(--text-mid); letter-spacing:.06em; display:flex; align-items:center; gap:7px; }
     .live-dot { width:7px; height:7px; border-radius:50%; background:var(--ok); animation:breathe 2.4s ease-in-out infinite; }
 
-    /* ── SIDEBAR ────────────────────────────────────────────────────────────── */
+    /* BODY ROW — sidebar + right column */
+    .body-row {
+      flex: 1;
+      display: flex;
+      min-height: 0; /* critical: lets flex children shrink */
+    }
+
+    /* SIDEBAR */
     .sidebar {
-      grid-row: 2/4;
-      grid-column: 1;
+      width: 300px;
+      flex-shrink: 0;
       border-right: 1px solid var(--border);
       background: var(--card-bg);
       padding: 28px 22px;
@@ -91,75 +95,35 @@
       flex-direction: column;
       gap: 7px;
     }
-
     .sidebar::-webkit-scrollbar { width:3px; }
     .sidebar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
-    .sidebar-label {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      letter-spacing: .22em;
-      color: var(--text-dim);
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .query-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 11px 13px;
-      border-radius: 7px;
-      background: var(--surface-hi);
-      border: 1px solid var(--card-border);
-      cursor: pointer;
-      transition: border-color .15s, background .15s;
-    }
-
+    .sidebar-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.22em; color:var(--text-dim); margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+    .query-card { display:flex; align-items:flex-start; gap:12px; padding:11px 13px; border-radius:7px; background:var(--surface-hi); border:1px solid var(--card-border); cursor:pointer; transition:border-color .15s,background .15s; }
     .query-card:hover { border-color:var(--border-hi); background:var(--surface); }
-
-    .query-icon {
-      flex-shrink: 0;
-      width: 16px;
-      height: 16px;
-      margin-top: 2px;
-      color: var(--text-mid);
-      opacity: .7;
-    }
-
+    .query-icon { flex-shrink:0; width:16px; height:16px; margin-top:2px; color:var(--text-mid); opacity:.7; }
     .query-card-content { flex:1; min-width:0; }
+    .query-card-title { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.12em; color:var(--text-mid); margin-bottom:3px; }
+    .query-card-example { font-size:12px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4; }
 
-    .query-card-title {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      letter-spacing: .12em;
-      color: var(--text-mid);
-      margin-bottom: 3px;
+    /* RIGHT COLUMN — conversation + control panel stacked */
+    .right-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
     }
 
-    .query-card-example {
-      font-size: 12px;
-      color: var(--text-dim);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.4;
-    }
-
-    /* ── CONVERSATION ───────────────────────────────────────────────────────── */
+    /* CONVERSATION */
     .conversation {
-      grid-row: 2;
-      grid-column: 2;
+      flex: 1;
       overflow-y: auto;
       padding: clamp(36px,5vh,64px) 0 24px;
       scroll-behavior: smooth;
     }
-
     .conversation::-webkit-scrollbar { width:4px; }
     .conversation::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
-    .inner { max-width: min(680px,88%); margin:0 auto; padding:0 36px; }
+    .inner { max-width:min(680px,88%); margin:0 auto; padding:0 36px; }
 
     .turn { margin-bottom:clamp(28px,3.5vh,44px); opacity:0; transform:translateY(8px); animation:fadeUp .3s ease forwards; }
     .turn-label { font-family:'DM Mono',monospace; font-size:clamp(10px,.75vw,12px); letter-spacing:.22em; margin-bottom:8px; font-weight:400; }
@@ -179,181 +143,92 @@
     .hint:hover { color:var(--text); padding-left:6px; }
     .hint-arrow { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); flex-shrink:0; }
 
-    /* ── STATUS STRIP ───────────────────────────────────────────────────────── */
-    .status-strip {
-      grid-row: 3;
-      grid-column: 2;
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      position: relative;   /* mic will anchor from bottombar top */
-    }
-
-    .status-label {
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      letter-spacing: .1em;
-      color: var(--text-dim);
-      transition: color .2s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .status-label.listening  { color:var(--ok); }
-    .status-label.barge      { color:var(--warn); }
-    .status-label.speaking   { color:var(--blue); }
-    .status-label.processing { color:var(--warn); }
-
-    .action-hints {
-      display: flex;
-      gap: 16px;
-      opacity: 0;
-      transition: opacity .3s;
-    }
-
-    .action-hints.visible { opacity:1; }
-
-    .action-hint {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      letter-spacing: .1em;
-      color: var(--text-dim);
-      background: var(--surface-hi);
-      border: 1px solid var(--border);
-      padding: 3px 10px;
-      border-radius: 3px;
-    }
-
-    /* waveform in status strip */
-    .waveform { display:flex; align-items:center; gap:3px; height:18px; opacity:0; transition:opacity .25s; }
-    .waveform.active { opacity:1; }
-    .wb { width:3px; border-radius:2px; background:var(--ok); animation:waveAnim .9s ease-in-out infinite; }
-    .waveform.barge-wf .wb    { background:var(--warn); animation-duration:.7s; }
-    .waveform.speaking-wf .wb { background:var(--blue); animation-duration:.6s; }
-    .wb:nth-child(1){animation-delay:0s} .wb:nth-child(2){animation-delay:.1s} .wb:nth-child(3){animation-delay:.2s}
-    .wb:nth-child(4){animation-delay:.3s} .wb:nth-child(5){animation-delay:.2s} .wb:nth-child(6){animation-delay:.1s} .wb:nth-child(7){animation-delay:0s}
-
-    /* ── BOTTOM BAR ─────────────────────────────────────────────────────────── */
-    .bottombar {
-      grid-row: 4;
-      grid-column: 1/-1;
-      position: relative;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 0 36px 22px;
+    /* CONTROL PANEL */
+    .control-panel {
+      flex-shrink: 0;
       border-top: 1px solid var(--border);
       background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;        /* centers children horizontally */
+      justify-content: center;
+      gap: 10px;
+      padding: 20px 36px;
     }
 
-    /* MIC — overlaps the border between status-strip and bottombar */
-    .mic-wrap {
-      position: absolute;
-      top: -40px;
-      /* center on the conversation column: 300px sidebar + half the rest */
-      left: calc(300px + (100% - 300px) / 2);
-      transform: translateX(-50%);
-      width: 80px;
-      height: 80px;
-      z-index: 20;
-    }
-
-    .mic-pulse {
-      position: absolute;
-      inset: -12px;
-      border-radius: 50%;
-      border: 1.5px solid var(--ok);
-      opacity: 0;
-      pointer-events: none;
-    }
-
+    /* MIC */
+    .mic-wrap { position:relative; width:80px; height:80px; flex-shrink:0; }
+    .mic-pulse { position:absolute; inset:-12px; border-radius:50%; border:1.5px solid var(--ok); opacity:0; pointer-events:none; }
     .mic-wrap.listening .mic-pulse { animation:pulseSlow 1.8s ease-out infinite; }
     .mic-wrap.barge     .mic-pulse { border-color:var(--warn); animation:pulseSlow 1.4s ease-out infinite; }
     .mic-wrap.speaking  .mic-pulse { border-color:var(--blue); animation:pulseSlow 1.2s ease-out infinite; }
 
     .mic-btn {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      border: 1.5px solid var(--border-hi);
-      background: var(--surface);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color .2s, background .2s, box-shadow .2s;
-      position: relative;
-      z-index: 1;
-      outline: none;
-      box-shadow: 0 4px 28px rgba(0,0,0,.4), 0 0 0 8px var(--bg);
+      width:80px; height:80px; border-radius:50%;
+      border:1.5px solid var(--border-hi); background:var(--surface);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:border-color .2s,background .2s,box-shadow .2s;
+      outline:none; box-shadow:0 2px 18px rgba(0,0,0,.35);
     }
-
-    .mic-btn::before {
-      content: '';
-      position: absolute;
-      inset: -9px;
-      border-radius: 50%;
-      background: var(--bg);
-      z-index: -1;
-    }
-
     .mic-btn:hover { border-color:var(--text-mid); }
-    .mic-btn.listening  { border-color:var(--ok);   background:rgba(74,222,128,.1);  box-shadow:0 4px 28px rgba(74,222,128,.25),0 0 0 8px var(--bg); }
-    .mic-btn.barge      { border-color:var(--warn);  background:rgba(251,146,60,.08); box-shadow:0 4px 28px rgba(251,146,60,.2), 0 0 0 8px var(--bg); }
-    .mic-btn.speaking   { border-color:var(--blue);  background:rgba(96,165,250,.1);  box-shadow:0 4px 28px rgba(96,165,250,.25),0 0 0 8px var(--bg); }
-    .mic-btn.processing { border-color:var(--warn);  background:rgba(251,146,60,.08); box-shadow:0 4px 28px rgba(251,146,60,.15),0 0 0 8px var(--bg); }
-
+    .mic-btn.listening  { border-color:var(--ok);   background:rgba(74,222,128,.1);  box-shadow:0 2px 18px rgba(74,222,128,.2); }
+    .mic-btn.barge      { border-color:var(--warn);  background:rgba(251,146,60,.08); box-shadow:0 2px 18px rgba(251,146,60,.18); }
+    .mic-btn.speaking   { border-color:var(--blue);  background:rgba(96,165,250,.1);  box-shadow:0 2px 18px rgba(96,165,250,.2); }
+    .mic-btn.processing { border-color:var(--warn);  background:rgba(251,146,60,.08); }
     .mic-btn svg { width:30px; height:30px; color:var(--mic-idle); transition:color .2s; }
     .mic-btn.listening  svg { color:var(--ok); }
     .mic-btn.barge      svg { color:var(--warn); }
     .mic-btn.speaking   svg { color:var(--blue); }
     .mic-btn.processing svg { color:var(--warn); }
 
-    /* ── INPUT ROW ──────────────────────────────────────────────────────────── */
+    /* STATUS */
+    .status-block { display:flex; flex-direction:column; align-items:center; gap:7px; }
+    .status-label { display:flex; align-items:center; gap:8px; font-family:'DM Mono',monospace; font-size:13px; letter-spacing:.1em; color:var(--text-dim); transition:color .2s; }
+    .status-label.listening  { color:var(--ok); }
+    .status-label.barge      { color:var(--warn); }
+    .status-label.speaking   { color:var(--blue); }
+    .status-label.processing { color:var(--warn); }
+
+    .waveform { display:flex; align-items:center; gap:3px; height:16px; opacity:0; transition:opacity .25s; }
+    .waveform.active { opacity:1; }
+    .wb { width:3px; border-radius:2px; background:var(--ok); animation:waveAnim .9s ease-in-out infinite; }
+    .waveform.barge-wf .wb    { background:var(--warn); animation-duration:.7s; }
+    .waveform.speaking-wf .wb { background:var(--blue); animation-duration:.6s; }
+    .wb:nth-child(1){animation-delay:0s}.wb:nth-child(2){animation-delay:.1s}.wb:nth-child(3){animation-delay:.2s}
+    .wb:nth-child(4){animation-delay:.3s}.wb:nth-child(5){animation-delay:.2s}.wb:nth-child(6){animation-delay:.1s}.wb:nth-child(7){animation-delay:0s}
+
+    .action-hints { display:flex; gap:12px; opacity:0; transition:opacity .3s; }
+    .action-hints.visible { opacity:1; }
+    .action-hint { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.1em; color:var(--text-dim); background:var(--surface-hi); border:1px solid var(--border); padding:3px 10px; border-radius:3px; }
+
+    /* INPUT — full width of panel minus padding */
     .input-row {
-      display: flex;
       width: 100%;
-      max-width: min(680px,88%);
-      gap: 0;
-      align-items: stretch;
+      display: flex;
       border: 1.5px solid var(--input-border);
       border-radius: 10px;
       background: var(--input-bg);
       overflow: hidden;
       transition: border-color .2s, box-shadow .2s;
-      margin-left: 300px;
     }
-
-    /* Offset the input to align with conversation column center */
-    /* Actually, let's center it properly */
-    .input-row {
-      margin-left: 0;
-    }
-
-    .input-row:focus-within {
-      border-color: var(--text-mid);
-      box-shadow: 0 0 0 3px var(--mic-ring);
-    }
+    .input-row:focus-within { border-color:var(--text-mid); box-shadow:0 0 0 3px var(--mic-ring); }
 
     .txt-input {
       flex: 1;
+      min-width: 0;
       background: transparent;
       border: none;
-      padding: 13px 20px;
+      padding: 14px 20px;
       color: var(--input-text);
       font-family: 'DM Sans', sans-serif;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 300;
       outline: none;
     }
-
     .txt-input::placeholder { color:var(--input-ph); }
 
     .txt-send {
+      flex-shrink: 0;
       background: none;
       border: none;
       border-left: 1.5px solid var(--input-border);
@@ -362,36 +237,25 @@
       font-family: 'DM Mono', monospace;
       font-size: 11px;
       letter-spacing: .12em;
-      padding: 0 20px;
-      min-width: 90px;
+      padding: 0 22px;
       transition: color .2s, background .2s, border-color .2s;
       outline: none;
       white-space: nowrap;
     }
-
     .txt-send:hover { color:var(--text); background:var(--surface-hi); }
+    .txt-send.stop-mode { color:var(--stop-text); border-left-color:var(--stop-border); background:var(--stop-bg); }
+    .txt-send.stop-mode:hover { background:rgba(248,113,113,0.18); }
 
-    /* STOP state for send button */
-    .txt-send.stop-mode {
-      color: var(--stop-text);
-      border-left-color: var(--stop-border);
-      background: var(--stop-bg);
-    }
-
-    .txt-send.stop-mode:hover {
-      background: rgba(248,113,113,0.18);
-    }
-
-    /* ── ANIMATIONS ─────────────────────────────────────────────────────────── */
+    /* ANIMATIONS */
     @keyframes breathe  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.8)} }
     @keyframes fadeUp   { to{opacity:1;transform:translateY(0)} }
     @keyframes typingDot{ 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
     @keyframes pulseSlow{ 0%{transform:scale(.85);opacity:.7} 100%{transform:scale(1.7);opacity:0} }
-    @keyframes waveAnim { 0%,100%{height:3px} 50%{height:16px} }
+    @keyframes waveAnim { 0%,100%{height:3px} 50%{height:14px} }
   </style>
 </head>
 <body>
-<div class="app">
+<div class="shell">
 
   <!-- TOPBAR -->
   <header class="topbar">
@@ -407,420 +271,277 @@
     </div>
   </header>
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-label">QUERY TYPES</div>
+  <div class="body-row">
 
-    <div class="query-card" onclick="sendQuery('What outages are active right now?')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">OUTAGE STATUS</div>
-        <div class="query-card-example">"What outages are active?"</div>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-label">QUERY TYPES</div>
+      <div class="query-card" onclick="sendQuery('What outages are active right now?')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <div class="query-card-content"><div class="query-card-title">OUTAGE STATUS</div><div class="query-card-example">"What outages are active?"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('Check Transformer T-12')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">EQUIPMENT STATUS</div>
-        <div class="query-card-example">"Check Transformer T-12"</div>
+      <div class="query-card" onclick="sendQuery('Check Transformer T-12')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/></svg>
+        <div class="query-card-content"><div class="query-card-title">EQUIPMENT STATUS</div><div class="query-card-example">"Check Transformer T-12"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('Log a power outage in Zone 4')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">INCIDENT REPORTING</div>
-        <div class="query-card-example">"Log a fault in Zone 4"</div>
+      <div class="query-card" onclick="sendQuery('Log a power outage in Zone 4')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <div class="query-card-content"><div class="query-card-title">INCIDENT REPORTING</div><div class="query-card-example">"Log a fault in Zone 4"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('Read me the evacuation procedure')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">EMERGENCY PROCEDURES</div>
-        <div class="query-card-example">"Evacuation procedure"</div>
+      <div class="query-card" onclick="sendQuery('Read me the evacuation procedure')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="query-card-content"><div class="query-card-title">EMERGENCY PROCEDURES</div><div class="query-card-example">"Evacuation procedure"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('What resources are available?')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">RESOURCE AVAILABILITY</div>
-        <div class="query-card-example">"Any spare generators?"</div>
+      <div class="query-card" onclick="sendQuery('What resources are available?')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <div class="query-card-content"><div class="query-card-title">RESOURCE AVAILABILITY</div><div class="query-card-example">"Any spare generators?"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('Who is the current shift supervisor?')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">CONTACT DIRECTORY</div>
-        <div class="query-card-example">"Who is on shift now?"</div>
+      <div class="query-card" onclick="sendQuery('Who is the current shift supervisor?')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="query-card-content"><div class="query-card-title">CONTACT DIRECTORY</div><div class="query-card-example">"Who is on shift now?"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('What are the safety protocols?')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">SAFETY PROTOCOLS</div>
-        <div class="query-card-example">"Safety rules for Zone 3"</div>
+      <div class="query-card" onclick="sendQuery('What are the safety protocols?')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div class="query-card-content"><div class="query-card-title">SAFETY PROTOCOLS</div><div class="query-card-example">"Safety rules for Zone 3"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('Are there any weather alerts?')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 20 8 16"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">WEATHER ALERTS</div>
-        <div class="query-card-example">"Any storm warnings?"</div>
+      <div class="query-card" onclick="sendQuery('Are there any weather alerts?')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 20 8 16"/></svg>
+        <div class="query-card-content"><div class="query-card-title">WEATHER ALERTS</div><div class="query-card-example">"Any storm warnings?"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('Who is on the current shift?')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">SHIFT INFORMATION</div>
-        <div class="query-card-example">"Current shift details"</div>
+      <div class="query-card" onclick="sendQuery('Who is on the current shift?')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="query-card-content"><div class="query-card-title">SHIFT INFORMATION</div><div class="query-card-example">"Current shift details"</div></div>
       </div>
-    </div>
-
-    <div class="query-card" onclick="sendQuery('Manual for Transformer T-12')">
-      <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <div class="query-card-content">
-        <div class="query-card-title">EQUIPMENT MANUALS</div>
-        <div class="query-card-example">"Manual for T-12"</div>
+      <div class="query-card" onclick="sendQuery('Manual for Transformer T-12')">
+        <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <div class="query-card-content"><div class="query-card-title">EQUIPMENT MANUALS</div><div class="query-card-example">"Manual for T-12"</div></div>
       </div>
-    </div>
-  </aside>
+    </aside>
 
-  <!-- CONVERSATION -->
-  <main class="conversation" id="conversation">
-    <div class="inner">
-      <div class="empty-state" id="empty-state">
-        <div class="empty-title">READY FOR INPUT</div>
-        <div class="hint" onclick="sendQuery('What outages are active right now?')"><span class="hint-arrow">→</span>What outages are active right now?</div>
-        <div class="hint" onclick="sendQuery('Check Transformer T-12')"><span class="hint-arrow">→</span>Check Transformer T-12</div>
-        <div class="hint" onclick="sendQuery('Read me the evacuation procedure')"><span class="hint-arrow">→</span>Read me the evacuation procedure</div>
-        <div class="hint" onclick="sendQuery('Who is the current shift supervisor?')"><span class="hint-arrow">→</span>Who is the current shift supervisor?</div>
-        <div class="hint" onclick="sendQuery('What can you do?')"><span class="hint-arrow">→</span>What can you do?</div>
-      </div>
-      <div class="typing-indicator" id="typing">
-        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
-      </div>
-    </div>
-  </main>
+    <!-- RIGHT COLUMN -->
+    <div class="right-col">
 
-  <!-- STATUS STRIP — sits above the mic -->
-  <div class="status-strip" id="status-strip">
-    <div class="status-label" id="status-label">
-      <div class="waveform" id="waveform">
-        <div class="wb" style="height:3px"></div><div class="wb" style="height:6px"></div>
-        <div class="wb" style="height:10px"></div><div class="wb" style="height:14px"></div>
-        <div class="wb" style="height:10px"></div><div class="wb" style="height:6px"></div>
-        <div class="wb" style="height:3px"></div>
-      </div>
-      <span id="status-text">Press mic or type below</span>
-    </div>
-    <div class="action-hints" id="action-hints">
-      <span class="action-hint" id="hint-stop">Say "stop" to interrupt</span>
-      <span class="action-hint" id="hint-repeat">Say "repeat" to replay</span>
-    </div>
-  </div>
+      <!-- CONVERSATION -->
+      <main class="conversation" id="conversation">
+        <div class="inner">
+          <div class="empty-state" id="empty-state">
+            <div class="empty-title">READY FOR INPUT</div>
+            <div class="hint" onclick="sendQuery('What outages are active right now?')"><span class="hint-arrow">→</span>What outages are active right now?</div>
+            <div class="hint" onclick="sendQuery('Check Transformer T-12')"><span class="hint-arrow">→</span>Check Transformer T-12</div>
+            <div class="hint" onclick="sendQuery('Read me the evacuation procedure')"><span class="hint-arrow">→</span>Read me the evacuation procedure</div>
+            <div class="hint" onclick="sendQuery('Who is the current shift supervisor?')"><span class="hint-arrow">→</span>Who is the current shift supervisor?</div>
+            <div class="hint" onclick="sendQuery('What can you do?')"><span class="hint-arrow">→</span>What can you do?</div>
+          </div>
+          <div class="typing-indicator" id="typing">
+            <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+          </div>
+        </div>
+      </main>
 
-  <!-- BOTTOM BAR -->
-  <footer class="bottombar">
-    <!-- Mic overlapping status-strip / bottombar border -->
-    <div class="mic-wrap" id="mic-wrap">
-      <div class="mic-pulse"></div>
-      <button class="mic-btn" id="mic-btn" onclick="handleMicClick()">
-        <svg id="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="2" width="6" height="11" rx="3"/>
-          <path d="M5 10a7 7 0 0 0 14 0"/>
-          <line x1="12" y1="19" x2="12" y2="22"/>
-          <line x1="8"  y1="22" x2="16" y2="22"/>
-        </svg>
-      </button>
-    </div>
+      <!-- CONTROL PANEL -->
+      <div class="control-panel">
 
-    <!-- Input -->
-    <div class="input-row">
-      <input class="txt-input" id="txt-input"
-        placeholder="Type a query and press Enter..."
-        onkeydown="if(event.key==='Enter')sendText()"/>
-      <button class="txt-send" id="txt-send" onclick="sendText()">SEND →</button>
-    </div>
-  </footer>
+        <div class="mic-wrap" id="mic-wrap">
+          <div class="mic-pulse"></div>
+          <button class="mic-btn" id="mic-btn" onclick="handleMicClick()">
+            <svg id="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="11" rx="3"/>
+              <path d="M5 10a7 7 0 0 0 14 0"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+              <line x1="8"  y1="22" x2="16" y2="22"/>
+            </svg>
+          </button>
+        </div>
 
-</div>
+        <div class="status-block">
+          <div class="status-label" id="status-label">
+            <div class="waveform" id="waveform">
+              <div class="wb" style="height:3px"></div><div class="wb" style="height:6px"></div>
+              <div class="wb" style="height:9px"></div><div class="wb" style="height:13px"></div>
+              <div class="wb" style="height:9px"></div><div class="wb" style="height:6px"></div>
+              <div class="wb" style="height:3px"></div>
+            </div>
+            <span id="status-text">Press mic or type below</span>
+          </div>
+          <div class="action-hints" id="action-hints">
+            <span class="action-hint">Say "stop" to interrupt</span>
+            <span class="action-hint">Say "repeat" to replay</span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <input class="txt-input" id="txt-input"
+            placeholder="Type a query and press Enter..."
+            onkeydown="if(event.key==='Enter')sendText()"/>
+          <button class="txt-send" id="txt-send" onclick="sendText()">SEND →</button>
+        </div>
+
+      </div><!-- /control-panel -->
+
+    </div><!-- /right-col -->
+
+  </div><!-- /body-row -->
+
+</div><!-- /shell -->
 
 <script>
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let micActive     = false;
-let phase         = 'idle';
-let mainRec       = null;
-let bargeRec      = null;
-let mainRunning   = false;
-let bargeRunning  = false;
-let speechSupported = false;
-let sessionId     = 'web-' + Date.now();
-let lastAgentText = '';
-let silenceTimer  = null;
-let interimText   = '';
-let pendingQuery  = false;
-let currentAudio  = null;
-let cooldownUntil = 0;
-let bargeHandling = false;
+let micActive=false,phase='idle',mainRec=null,bargeRec=null,mainRunning=false,bargeRunning=false;
+let speechSupported=false,sessionId='web-'+Date.now(),lastAgentText='',silenceTimer=null;
+let interimText='',pendingQuery=false,currentAudio=null,cooldownUntil=0,bargeHandling=false;
+const STOP_WORDS=['stop','halt','quiet','silence','enough'];
+const REPEAT_WORDS=['repeat','repeat that','say that again','again','what did you say'];
+const COOLDOWN_MS=600;
 
-const STOP_WORDS   = ['stop','halt','quiet','silence','enough'];
-const REPEAT_WORDS = ['repeat','repeat that','say that again','again','what did you say'];
-const COOLDOWN_MS  = 600;
-
-// ─── THEME ────────────────────────────────────────────────────────────────────
-function setTheme(t){
-  document.documentElement.setAttribute('data-theme',t);
-  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
-  localStorage.setItem('gg-theme',t);
-}
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.t===t));localStorage.setItem('gg-theme',t);}
 (()=>setTheme(localStorage.getItem('gg-theme')||'dark'))();
 
-// ─── CLOCK ────────────────────────────────────────────────────────────────────
 setInterval(()=>document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC',1000);
 document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC';
 
-// ─── SPEECH RECOGNITION ───────────────────────────────────────────────────────
 function initSpeech(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){ updateStatus('idle','Voice unavailable — use text input below'); return; }
+  if(!SR){updateStatusText('idle','Voice unavailable — use text input');return;}
   speechSupported=true;
-
-  mainRec=new SR();
-  mainRec.continuous=true; mainRec.interimResults=true; mainRec.lang='en-US'; mainRec.maxAlternatives=1;
-  mainRec.onstart=()=>{ mainRunning=true; };
+  mainRec=new SR();mainRec.continuous=true;mainRec.interimResults=true;mainRec.lang='en-US';mainRec.maxAlternatives=1;
+  mainRec.onstart=()=>{mainRunning=true;};
   mainRec.onresult=(e)=>{
-    if(!micActive||phase==='speaking') return;
-    if(Date.now()<cooldownUntil) return;
+    if(!micActive||phase==='speaking'||Date.now()<cooldownUntil)return;
     let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t=e.results[i][0].transcript.trim();
-      if(e.results[i].isFinal) final+=t; else interim+=t;
-    }
+    for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript.trim();if(e.results[i].isFinal)final+=t;else interim+=t;}
     interimText=interim;
-    if(final){
-      clearTimeout(silenceTimer); interimText='';
-      if(!pendingQuery){ pendingQuery=true; sendQuery(final); }
-    } else if(interim.length>3){
-      clearTimeout(silenceTimer);
-      silenceTimer=setTimeout(()=>{
-        if(interimText&&phase==='listening'&&!pendingQuery&&Date.now()>=cooldownUntil){
-          const t=interimText; interimText=''; pendingQuery=true; sendQuery(t);
-        }
-      },2000);
-    }
+    if(final){clearTimeout(silenceTimer);interimText='';if(!pendingQuery){pendingQuery=true;sendQuery(final);}}
+    else if(interim.length>3){clearTimeout(silenceTimer);silenceTimer=setTimeout(()=>{if(interimText&&phase==='listening'&&!pendingQuery&&Date.now()>=cooldownUntil){const t=interimText;interimText='';pendingQuery=true;sendQuery(t);}},2000);}
   };
-  mainRec.onerror=(e)=>{ mainRunning=false; if(e.error==='aborted'||e.error==='no-speech'){ safeStartMain(); return; } };
-  mainRec.onend=()=>{ mainRunning=false; if(micActive&&phase!=='speaking') safeStartMain(); };
+  mainRec.onerror=(e)=>{mainRunning=false;if(e.error==='aborted'||e.error==='no-speech')safeStartMain();};
+  mainRec.onend=()=>{mainRunning=false;if(micActive&&phase!=='speaking')safeStartMain();};
 
-  bargeRec=new SR();
-  bargeRec.continuous=true; bargeRec.interimResults=true; bargeRec.lang='en-US'; bargeRec.maxAlternatives=1;
-  bargeRec.onstart=()=>{ bargeRunning=true; };
+  bargeRec=new SR();bargeRec.continuous=true;bargeRec.interimResults=true;bargeRec.lang='en-US';bargeRec.maxAlternatives=1;
+  bargeRec.onstart=()=>{bargeRunning=true;};
   bargeRec.onresult=(e)=>{
-    if(phase!=='speaking'||bargeHandling) return;
-    let combined='';
-    for(let i=e.resultIndex;i<e.results.length;i++) combined+=e.results[i][0].transcript.toLowerCase()+' ';
-    if(STOP_WORDS.some(w=>combined.includes(w)))  { bargeHandling=true; stopAgent(false); return; }
-    if(REPEAT_WORDS.some(w=>combined.includes(w))){ bargeHandling=true; stopAgent(true);  return; }
+    if(phase!=='speaking'||bargeHandling)return;
+    let c='';for(let i=e.resultIndex;i<e.results.length;i++)c+=e.results[i][0].transcript.toLowerCase()+' ';
+    if(STOP_WORDS.some(w=>c.includes(w))){bargeHandling=true;stopAgent(false);return;}
+    if(REPEAT_WORDS.some(w=>c.includes(w))){bargeHandling=true;stopAgent(true);return;}
   };
-  bargeRec.onerror=(e)=>{ bargeRunning=false; if(e.error!=='aborted'&&phase==='speaking'&&micActive) safeStartBarge(); };
-  bargeRec.onend=()=>{ bargeRunning=false; if(phase==='speaking'&&micActive) safeStartBarge(); };
+  bargeRec.onerror=(e)=>{bargeRunning=false;if(e.error!=='aborted'&&phase==='speaking'&&micActive)safeStartBarge();};
+  bargeRec.onend=()=>{bargeRunning=false;if(phase==='speaking'&&micActive)safeStartBarge();};
 }
 
-function safeStartMain(){
-  if(!speechSupported||!micActive||mainRunning||phase==='speaking') return;
-  setTimeout(()=>{ if(!micActive||mainRunning||phase==='speaking') return; try{ mainRec.start(); }catch(e){} },120);
-}
-function safeStartBarge(){
-  if(!speechSupported||!micActive||bargeRunning) return;
-  setTimeout(()=>{ if(!micActive||bargeRunning) return; try{ bargeRec.start(); }catch(e){} },120);
-}
-function safeStopMain(){ if(!mainRunning) return; try{ mainRec.stop(); }catch(e){} }
-function safeStopBarge(){ if(!bargeRunning) return; try{ bargeRec.stop(); }catch(e){} }
+function safeStartMain(){if(!speechSupported||!micActive||mainRunning||phase==='speaking')return;setTimeout(()=>{if(!micActive||mainRunning||phase==='speaking')return;try{mainRec.start();}catch(e){}},120);}
+function safeStartBarge(){if(!speechSupported||!micActive||bargeRunning)return;setTimeout(()=>{if(!micActive||bargeRunning)return;try{bargeRec.start();}catch(e){}},120);}
+function safeStopMain(){if(!mainRunning)return;try{mainRec.stop();}catch(e){}}
+function safeStopBarge(){if(!bargeRunning)return;try{bargeRec.stop();}catch(e){}}
 
-// ─── MIC BUTTON ───────────────────────────────────────────────────────────────
 function handleMicClick(){
-  if(!speechSupported){ document.getElementById('txt-input').focus(); return; }
-  if(phase==='speaking'){ stopAndKillMic(); return; }
-  if(!micActive){ micActive=true; safeStartMain(); setPhase('listening'); }
-  else { micActive=false; safeStopMain(); safeStopBarge(); setPhase('idle'); }
+  if(!speechSupported){document.getElementById('txt-input').focus();return;}
+  if(phase==='speaking'){stopAndKillMic();return;}
+  if(!micActive){micActive=true;safeStartMain();setPhase('listening');}
+  else{micActive=false;safeStopMain();safeStopBarge();setPhase('idle');}
 }
 
-// ─── STOP BUTTON (on send btn) — kills audio + mic ───────────────────────────
 function stopAndKillMic(){
-  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
   window.speechSynthesis&&window.speechSynthesis.cancel();
-  safeStopBarge(); safeStopMain();
-  micActive=false; bargeHandling=false;
-  cooldownUntil=Date.now()+COOLDOWN_MS;
-  setPhase('idle');
+  safeStopBarge();safeStopMain();micActive=false;bargeHandling=false;
+  cooldownUntil=Date.now()+COOLDOWN_MS;setPhase('idle');
 }
 
-// ─── STOP AGENT — voice command, keeps mic ────────────────────────────────────
 function stopAgent(thenRepeat){
-  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
   window.speechSynthesis&&window.speechSynthesis.cancel();
-  safeStopBarge();
-  cooldownUntil=Date.now()+COOLDOWN_MS;
-  if(thenRepeat&&lastAgentText){
-    setTimeout(()=>{ bargeHandling=false; speak(lastAgentText); },350);
-  } else {
-    bargeHandling=false;
-    if(micActive){ setPhase('listening'); safeStartMain(); } else setPhase('idle');
-  }
+  safeStopBarge();cooldownUntil=Date.now()+COOLDOWN_MS;
+  if(thenRepeat&&lastAgentText){setTimeout(()=>{bargeHandling=false;speak(lastAgentText);},350);}
+  else{bargeHandling=false;if(micActive){setPhase('listening');safeStartMain();}else setPhase('idle');}
 }
 
-// ─── TTS ──────────────────────────────────────────────────────────────────────
 async function speak(text){
   bargeHandling=false;
-  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
   window.speechSynthesis&&window.speechSynthesis.cancel();
-  safeStopMain(); setPhase('speaking');
-  if(micActive) safeStartBarge();
-
+  safeStopMain();setPhase('speaking');if(micActive)safeStartBarge();
   try{
-    const res=await fetch('/tts',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
-    if(res.headers.get('content-type')?.includes('application/json')){
-      const data=await res.json(); if(data.fallback) return speakWebSpeech(text);
-    }
-    const blob=await res.blob();
-    const url=URL.createObjectURL(blob);
+    const res=await fetch('/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if(res.headers.get('content-type')?.includes('application/json')){const d=await res.json();if(d.fallback)return speakWebSpeech(text);}
+    const blob=await res.blob();const url=URL.createObjectURL(blob);
     currentAudio=new Audio(url);
-    currentAudio.onended=()=>{ URL.revokeObjectURL(url); currentAudio=null; onAgentFinished(); };
-    currentAudio.onerror=()=>{ currentAudio=null; onAgentFinished(); };
+    currentAudio.onended=()=>{URL.revokeObjectURL(url);currentAudio=null;onAgentFinished();};
+    currentAudio.onerror=()=>{currentAudio=null;onAgentFinished();};
     await currentAudio.play();
-  } catch(e){ speakWebSpeech(text); }
+  }catch(e){speakWebSpeech(text);}
 }
 
 function speakWebSpeech(text){
-  if(!window.speechSynthesis){ onAgentFinished(); return; }
+  if(!window.speechSynthesis){onAgentFinished();return;}
   window.speechSynthesis.cancel();
   const utt=new SpeechSynthesisUtterance(text);
   const voices=window.speechSynthesis.getVoices();
   const v=voices.find(v=>v.name.includes('Google UK English Male'))||voices.find(v=>v.lang==='en-GB')||voices.find(v=>v.lang==='en-US')||voices[0];
-  if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.9; utt.volume=1;
-  utt.onend=()=>onAgentFinished(); utt.onerror=()=>onAgentFinished();
+  if(v)utt.voice=v;utt.rate=1.05;utt.pitch=0.9;utt.volume=1;
+  utt.onend=()=>onAgentFinished();utt.onerror=()=>onAgentFinished();
   window.speechSynthesis.speak(utt);
 }
 
 function onAgentFinished(){
-  safeStopBarge(); currentAudio=null; bargeHandling=false;
+  safeStopBarge();currentAudio=null;bargeHandling=false;
   cooldownUntil=Date.now()+COOLDOWN_MS;
-  if(micActive){ setPhase('listening'); safeStartMain(); } else setPhase('idle');
+  if(micActive){setPhase('listening');safeStartMain();}else setPhase('idle');
 }
 
-// ─── QUERY ────────────────────────────────────────────────────────────────────
 async function sendQuery(text){
-  if(!text.trim()){ pendingQuery=false; return; }
-  clearTimeout(silenceTimer);
-  safeStopMain(); safeStopBarge();
-  setPhase('processing'); removeEmpty();
-  addTurn('user',text); showTyping(true);
-
+  if(!text.trim()){pendingQuery=false;return;}
+  clearTimeout(silenceTimer);safeStopMain();safeStopBarge();
+  setPhase('processing');removeEmpty();addTurn('user',text);showTyping(true);
   try{
-    const res=await fetch('/chat',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text,sessionId}) });
-    const data=await res.json();
-    const response=data.response||data.error||'No response received.';
-    showTyping(false); lastAgentText=response;
-    addTurn('agent',response); speak(response);
-  } catch(e){
-    showTyping(false);
-    const err='Connection error. Check server status.';
-    addTurn('agent',err); lastAgentText=err; speak(err);
-  } finally{ pendingQuery=false; }
+    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,sessionId})});
+    const data=await res.json();const response=data.response||data.error||'No response received.';
+    showTyping(false);lastAgentText=response;addTurn('agent',response);speak(response);
+  }catch(e){
+    showTyping(false);const err='Connection error. Check server status.';
+    addTurn('agent',err);lastAgentText=err;speak(err);
+  }finally{pendingQuery=false;}
 }
 
 function sendText(){
-  // If in stop-mode, the button acts as stop
-  if(phase==='speaking'){ stopAndKillMic(); return; }
-  const inp=document.getElementById('txt-input');
-  const t=inp.value.trim(); if(!t) return;
-  inp.value='';
-  if(!pendingQuery){ pendingQuery=true; sendQuery(t); }
+  if(phase==='speaking'){stopAndKillMic();return;}
+  const inp=document.getElementById('txt-input');const t=inp.value.trim();if(!t)return;
+  inp.value='';if(!pendingQuery){pendingQuery=true;sendQuery(t);}
 }
 
-// ─── UI PHASE ─────────────────────────────────────────────────────────────────
-const MIC_SVG_MIC = `<rect x="9" y="2" width="6" height="11" rx="3"/>
-  <path d="M5 10a7 7 0 0 0 14 0"/>
-  <line x1="12" y1="19" x2="12" y2="22"/>
-  <line x1="8"  y1="22" x2="16" y2="22"/>`;
-
-const MIC_SVG_X = `<line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/>
-  <line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/>`;
+const MIC_SVG=`<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>`;
+const X_SVG=`<line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/>`;
 
 function setPhase(p){
-  phase=p;
-  const visual=(p==='speaking'&&micActive)?'barge':p;
-
-  document.getElementById('mic-btn').className  = 'mic-btn '+visual;
-  document.getElementById('mic-wrap').className = 'mic-wrap '+visual;
-
-  // Mic icon: X when speaking, mic otherwise
-  document.getElementById('mic-svg').innerHTML = (p==='speaking') ? MIC_SVG_X : MIC_SVG_MIC;
-
-  // Waveform
+  phase=p;const visual=(p==='speaking'&&micActive)?'barge':p;
+  document.getElementById('mic-btn').className='mic-btn '+visual;
+  document.getElementById('mic-wrap').className='mic-wrap '+visual;
+  document.getElementById('mic-svg').innerHTML=(p==='speaking')?X_SVG:MIC_SVG;
   const wf=document.getElementById('waveform');
   wf.className='waveform'+(visual==='listening'||visual==='barge'||visual==='speaking'?' active':'')+
                (visual==='speaking'?' speaking-wf':visual==='barge'?' barge-wf':'');
-
-  // Status text
-  const labels={
-    idle:       'Press mic or type below',
-    listening:  'Listening...',
-    processing: 'Processing...',
-    speaking:   'Speaking...'
-  };
-  const sl=document.getElementById('status-label');
-  sl.className='status-label '+(visual==='barge'?'barge':p);
-  document.getElementById('status-text').textContent = labels[p]||'Ready';
-
-  // Action hints — show when speaking with mic on
-  document.getElementById('action-hints').className = 'action-hints'+(p==='speaking'&&micActive?' visible':'');
-
-  // Send button → Stop button when speaking
-  const sendBtn=document.getElementById('txt-send');
-  if(p==='speaking'){
-    sendBtn.textContent='■ STOP';
-    sendBtn.className='txt-send stop-mode';
-  } else {
-    sendBtn.textContent='SEND →';
-    sendBtn.className='txt-send';
-  }
+  const labels={idle:'Press mic or type below',listening:'Listening...',processing:'Processing...',speaking:'Speaking...'};
+  document.getElementById('status-text').textContent=labels[p]||'Ready';
+  document.getElementById('status-label').className='status-label '+(visual==='barge'?'barge':p);
+  document.getElementById('action-hints').className='action-hints'+(p==='speaking'&&micActive?' visible':'');
+  const sb=document.getElementById('txt-send');
+  if(p==='speaking'){sb.textContent='■ STOP';sb.className='txt-send stop-mode';}
+  else{sb.textContent='SEND →';sb.className='txt-send';}
 }
 
-function updateStatus(p,t){
-  document.getElementById('status-text').textContent=t;
-  document.getElementById('status-label').className='status-label '+p;
-}
+function updateStatusText(p,t){document.getElementById('status-text').textContent=t;document.getElementById('status-label').className='status-label '+p;}
 
-// ─── DOM ──────────────────────────────────────────────────────────────────────
 function addTurn(role,text){
-  const conv=document.getElementById('conversation');
-  const inner=conv.querySelector('.inner');
-  const typing=document.getElementById('typing');
-  const turn=document.createElement('div');
-  turn.className='turn '+role;
+  const conv=document.getElementById('conversation');const inner=conv.querySelector('.inner');const typing=document.getElementById('typing');
+  const turn=document.createElement('div');turn.className='turn '+role;
   turn.innerHTML=`<div class="turn-label">${role==='user'?'OPERATOR':'GRIDGUARD'}</div><div class="turn-text">${esc(text)}</div>`;
-  inner.insertBefore(turn,typing); conv.scrollTop=conv.scrollHeight;
+  inner.insertBefore(turn,typing);conv.scrollTop=conv.scrollHeight;
 }
-
-function showTyping(show){
-  document.getElementById('typing').className='typing-indicator'+(show?' visible':'');
-  if(show) document.getElementById('conversation').scrollTop=999999;
-}
-
-function removeEmpty(){ const el=document.getElementById('empty-state'); if(el) el.remove(); }
-function esc(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showTyping(show){document.getElementById('typing').className='typing-indicator'+(show?' visible':'');if(show)document.getElementById('conversation').scrollTop=999999;}
+function removeEmpty(){const el=document.getElementById('empty-state');if(el)el.remove();}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 window.onload=()=>{
   initSpeech();
-  if(window.speechSynthesis){ window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices(); }
+  if(window.speechSynthesis){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();}
 };
 </script>
 </body>
