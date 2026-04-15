@@ -34,10 +34,8 @@
     }
 
     html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;overflow:hidden;transition:background .3s,color .3s}
-
     .app{display:grid;grid-template-rows:clamp(52px,6vh,64px) 1fr 1px clamp(100px,14vh,130px);height:100vh}
 
-    /* TOPBAR */
     .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 clamp(20px,3vw,40px);background:var(--topbar-bg);border-bottom:1px solid var(--border);transition:background .3s,border-color .3s}
     .wordmark{font-family:'DM Mono',monospace;font-size:clamp(13px,1.2vw,17px);font-weight:500;letter-spacing:.22em;color:var(--text)}
     .topbar-right{display:flex;align-items:center;gap:clamp(12px,2vw,28px)}
@@ -51,7 +49,6 @@
     .meta-item{font-family:'DM Mono',monospace;font-size:clamp(10px,.9vw,13px);color:var(--text-mid);letter-spacing:.08em;display:flex;align-items:center;gap:6px}
     .live-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:breathe 2.4s ease-in-out infinite}
 
-    /* CONVERSATION */
     .conversation{overflow-y:auto;padding:clamp(32px,5vh,64px) 0 clamp(16px,2vh,32px);scroll-behavior:smooth}
     .conversation::-webkit-scrollbar{width:4px}
     .conversation::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -78,36 +75,39 @@
 
     .divider{background:var(--border)}
 
-    /* BOTTOM BAR */
     .bottombar{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,1.2vh,14px);padding:0 clamp(20px,3vw,40px);background:var(--bg);transition:background .3s}
-
     .voice-row{display:flex;align-items:center;gap:clamp(12px,1.8vw,22px);width:100%;max-width:min(680px,88vw)}
 
     .mic-wrap{position:relative;width:clamp(44px,4.5vw,56px);height:clamp(44px,4.5vw,56px);flex-shrink:0}
     .mic-pulse{position:absolute;inset:-8px;border-radius:50%;border:1.5px solid var(--ok);opacity:0;pointer-events:none}
     .mic-wrap.listening .mic-pulse{animation:pulseSlow 1.8s ease-out infinite}
+    .mic-wrap.barge    .mic-pulse{border-color:var(--warn);animation:pulseSlow 1.4s ease-out infinite}
     .mic-wrap.speaking  .mic-pulse{border-color:var(--blue);animation:pulseSlow 1.2s ease-out infinite}
 
     .mic-btn{width:100%;height:100%;border-radius:50%;border:1.5px solid var(--border-hi);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .2s,box-shadow .2s;position:relative;z-index:1;outline:none}
     .mic-btn:hover{border-color:var(--text-mid);box-shadow:0 0 0 3px rgba(128,128,128,.08)}
-    .mic-btn.listening{border-color:var(--ok);  background:rgba(74,222,128,.08);box-shadow:0 0 0 3px rgba(74,222,128,.08)}
-    .mic-btn.speaking {border-color:var(--blue);background:rgba(96,165,250,.08);box-shadow:0 0 0 3px rgba(96,165,250,.08)}
-    .mic-btn.processing{border-color:var(--warn);background:rgba(251,146,60,.08)}
+    .mic-btn.listening {border-color:var(--ok);  background:rgba(74,222,128,.08); box-shadow:0 0 0 3px rgba(74,222,128,.08)}
+    .mic-btn.barge     {border-color:var(--warn); background:rgba(251,146,60,.06); box-shadow:0 0 0 3px rgba(251,146,60,.06)}
+    .mic-btn.speaking  {border-color:var(--blue); background:rgba(96,165,250,.08); box-shadow:0 0 0 3px rgba(96,165,250,.08)}
+    .mic-btn.processing{border-color:var(--warn); background:rgba(251,146,60,.08)}
     .mic-btn svg{width:clamp(18px,1.8vw,24px);height:clamp(18px,1.8vw,24px);color:var(--mic-idle);transition:color .2s}
-    .mic-btn.listening svg{color:var(--ok)}
-    .mic-btn.speaking  svg{color:var(--blue)}
+    .mic-btn.listening  svg{color:var(--ok)}
+    .mic-btn.barge      svg{color:var(--warn)}
+    .mic-btn.speaking   svg{color:var(--blue)}
     .mic-btn.processing svg{color:var(--warn)}
 
     .waveform{display:flex;align-items:center;gap:3px;height:clamp(20px,2.5vh,28px);opacity:0;transition:opacity .25s;flex-shrink:0}
     .waveform.active{opacity:1}
     .wb{width:3px;border-radius:2px;background:var(--ok);animation:waveAnim .9s ease-in-out infinite}
+    .waveform.barge-wf  .wb{background:var(--warn);animation-duration:.7s}
     .waveform.speaking-wf .wb{background:var(--blue);animation-duration:.6s}
     .wb:nth-child(1){animation-delay:0s}.wb:nth-child(2){animation-delay:.1s}.wb:nth-child(3){animation-delay:.2s}
     .wb:nth-child(4){animation-delay:.3s}.wb:nth-child(5){animation-delay:.2s}.wb:nth-child(6){animation-delay:.1s}.wb:nth-child(7){animation-delay:0s}
 
     .status-label{font-family:'DM Mono',monospace;font-size:clamp(11px,1vw,14px);letter-spacing:.1em;color:var(--text-dim);flex:1;transition:color .2s}
-    .status-label.listening{color:var(--ok)}
-    .status-label.speaking{color:var(--blue)}
+    .status-label.listening {color:var(--ok)}
+    .status-label.barge     {color:var(--warn)}
+    .status-label.speaking  {color:var(--blue)}
     .status-label.processing{color:var(--warn)}
 
     .barge-hint{font-family:'DM Mono',monospace;font-size:clamp(9px,.8vw,11px);color:var(--text-dim);letter-spacing:.1em;opacity:0;transition:opacity .3s;white-space:nowrap}
@@ -197,21 +197,24 @@
 
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
-// micActive  : user has turned the mic ON (persists across processing/speaking)
-// phase      : idle | listening | processing | speaking
-let micActive  = false;
-let phase      = 'idle';
-let recognition = null;
+let micActive     = false;
+let phase         = 'idle';       // idle | listening | processing | speaking
+let mainRec       = null;         // recognition for normal operator input
+let bargeRec      = null;         // recognition ONLY for barge-in keywords during speaking
+let mainRunning   = false;
+let bargeRunning  = false;
 let speechSupported = false;
-let sessionId  = 'web-' + Date.now();
+let sessionId     = 'web-' + Date.now();
 let lastAgentText = '';
 let silenceTimer  = null;
 let interimText   = '';
-let recRunning    = false;   // tracks whether recognition.start() is in effect
-let pendingQuery  = false;   // prevents double-sends
+let pendingQuery  = false;
+let currentAudio  = null;         // HTMLAudioElement for Azure TTS
+let cooldownUntil = 0;            // timestamp — ignore results until this time
 
 const STOP_WORDS   = ['stop','halt','quiet','silence','enough'];
 const REPEAT_WORDS = ['repeat','repeat that','say that again','again','what did you say'];
+const COOLDOWN_MS  = 600;         // ms to ignore recognition after agent finishes
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 function setTheme(t){
@@ -219,60 +222,45 @@ function setTheme(t){
   document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
   localStorage.setItem('gg-theme',t);
 }
-(()=>{ setTheme(localStorage.getItem('gg-theme')||'dark'); })();
+(()=>setTheme(localStorage.getItem('gg-theme')||'dark'))();
 
 // ─── CLOCK ────────────────────────────────────────────────────────────────────
-setInterval(()=>{document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC';},1000);
+setInterval(()=>document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC',1000);
 document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC';
 
 // ─── SPEECH RECOGNITION ───────────────────────────────────────────────────────
 function initSpeech(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){ setLabel('idle','Voice unavailable — use text input'); return; }
-  speechSupported = true;
+  speechSupported=true;
 
-  recognition = new SR();
-  recognition.continuous     = true;
-  recognition.interimResults = true;
-  recognition.lang           = 'en-US';
-  recognition.maxAlternatives = 1;
+  // ── MAIN RECOGNITION — for operator input only ───────────────────────────
+  mainRec=new SR();
+  mainRec.continuous=true;
+  mainRec.interimResults=true;
+  mainRec.lang='en-US';
+  mainRec.maxAlternatives=1;
 
-  recognition.onstart = ()=>{ recRunning = true; };
+  mainRec.onstart=()=>{ mainRunning=true; };
 
-  recognition.onresult = (e)=>{
-    if(!micActive) return;           // mic was turned off, ignore
+  mainRec.onresult=(e)=>{
+    if(!micActive||phase==='speaking') return;       // speaking handled by bargeRec
+    if(Date.now()<cooldownUntil) return;             // still in post-speech cooldown
 
-    let interim='', final='';
+    let interim='',final='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const t=e.results[i][0].transcript.trim();
       if(e.results[i].isFinal) final+=t; else interim+=t;
     }
-    interimText = interim;
-
-    // ── BARGE-IN: check on EVERY result (interim or final) while agent speaks ──
-    const combined=(final||interim).toLowerCase();
-    if(phase==='speaking'){
-      if(STOP_WORDS.some(w=>combined.includes(w))){
-        stopAgent(false); return;
-      }
-      if(REPEAT_WORDS.some(w=>combined.includes(w))){
-        stopAgent(true); return;
-      }
-      // Not a barge-in command — ignore while agent is talking
-      return;
-    }
-
-    // ── Normal input: only act when phase is 'listening' ──
-    if(phase!=='listening') return;
+    interimText=interim;
 
     if(final){
-      clearTimeout(silenceTimer);
-      interimText='';
+      clearTimeout(silenceTimer); interimText='';
       if(!pendingQuery){ pendingQuery=true; sendQuery(final); }
     } else if(interim.length>3){
       clearTimeout(silenceTimer);
       silenceTimer=setTimeout(()=>{
-        if(interimText && phase==='listening' && !pendingQuery){
+        if(interimText&&phase==='listening'&&!pendingQuery&&Date.now()>=cooldownUntil){
           const t=interimText; interimText='';
           pendingQuery=true; sendQuery(t);
         }
@@ -280,106 +268,200 @@ function initSpeech(){
     }
   };
 
-  recognition.onerror=(e)=>{
-    recRunning=false;
-    if(e.error==='aborted'||e.error==='no-speech'){
-      safeStartRec(); return;
-    }
-    console.warn('SR:',e.error);
+  mainRec.onerror=(e)=>{
+    mainRunning=false;
+    if(e.error==='aborted'||e.error==='no-speech'){ safeStartMain(); return; }
+    console.warn('mainRec error:',e.error);
   };
 
-  recognition.onend=()=>{
-    recRunning=false;
-    // Always restart if mic is active — regardless of phase
-    // This is the key fix: recognition must run during ALL phases when mic is on
-    if(micActive) safeStartRec();
+  mainRec.onend=()=>{
+    mainRunning=false;
+    // Restart only when mic is active AND not speaking (bargeRec handles speaking)
+    if(micActive&&phase!=='speaking') safeStartMain();
+  };
+
+  // ── BARGE-IN RECOGNITION — keyword-only, runs ONLY during speaking ────────
+  bargeRec=new SR();
+  bargeRec.continuous=true;
+  bargeRec.interimResults=true;   // interim for faster detection
+  bargeRec.lang='en-US';
+  bargeRec.maxAlternatives=1;
+
+  bargeRec.onstart=()=>{ bargeRunning=true; };
+
+  bargeRec.onresult=(e)=>{
+    if(phase!=='speaking') return;  // only process during speaking phase
+
+    let combined='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      combined+=e.results[i][0].transcript.toLowerCase()+' ';
+    }
+
+    // STOP — cancel agent and return to listening
+    if(STOP_WORDS.some(w=>combined.includes(w))){
+      stopAgent(false); return;
+    }
+    // REPEAT — cancel agent and replay last response
+    if(REPEAT_WORDS.some(w=>combined.includes(w))){
+      stopAgent(true); return;
+    }
+    // All other speech during speaking is silently ignored — never sent to agent
+  };
+
+  bargeRec.onerror=(e)=>{
+    bargeRunning=false;
+    if(e.error==='aborted') return;
+    // Restart barge-in recognition if still speaking
+    if(phase==='speaking'&&micActive) safeStartBarge();
+  };
+
+  bargeRec.onend=()=>{
+    bargeRunning=false;
+    // Restart if still speaking
+    if(phase==='speaking'&&micActive) safeStartBarge();
   };
 }
 
-function safeStartRec(){
-  if(!speechSupported||!micActive||recRunning) return;
+function safeStartMain(){
+  if(!speechSupported||!micActive||mainRunning||phase==='speaking') return;
   setTimeout(()=>{
-    if(!micActive||recRunning) return;
-    try{ recognition.start(); } catch(e){}
+    if(!micActive||mainRunning||phase==='speaking') return;
+    try{ mainRec.start(); }catch(e){}
   },120);
 }
 
-function safeStopRec(){
-  if(!recRunning) return;
-  try{ recognition.stop(); } catch(e){}
+function safeStartBarge(){
+  if(!speechSupported||!micActive||bargeRunning) return;
+  setTimeout(()=>{
+    if(!micActive||bargeRunning) return;
+    try{ bargeRec.start(); }catch(e){}
+  },120);
+}
+
+function safeStopMain(){
+  if(!mainRunning) return;
+  try{ mainRec.stop(); }catch(e){}
+}
+
+function safeStopBarge(){
+  if(!bargeRunning) return;
+  try{ bargeRec.stop(); }catch(e){}
 }
 
 // ─── MIC BUTTON ───────────────────────────────────────────────────────────────
 function handleMicClick(){
   if(!speechSupported){ document.getElementById('txt-input').focus(); return; }
-
-  if(phase==='speaking'){
-    // Clicking mic while agent speaks = stop agent
-    stopAgent(false);
-    return;
-  }
+  if(phase==='speaking'){ stopAgent(false); return; }
 
   if(!micActive){
-    // Turn mic ON
     micActive=true;
-    safeStartRec();
+    safeStartMain();
     setPhase('listening');
   } else {
-    // Turn mic OFF
     micActive=false;
-    safeStopRec();
+    safeStopMain();
+    safeStopBarge();
     setPhase('idle');
   }
 }
 
-// ─── TTS ──────────────────────────────────────────────────────────────────────
-function speak(text){
-  if(!window.speechSynthesis){ resumeListening(); return; }
-  window.speechSynthesis.cancel();
+// ─── TTS — Azure Neural with Web Speech fallback ──────────────────────────────
+async function speak(text){
+  // Stop any currently playing audio
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  window.speechSynthesis&&window.speechSynthesis.cancel();
 
-  const utt=new SpeechSynthesisUtterance(text);
-  const voices=window.speechSynthesis.getVoices();
-  const v=
-    voices.find(v=>v.name.includes('Google UK English Male'))||
-    voices.find(v=>v.name.includes('Microsoft David'))||
-    voices.find(v=>v.name==='Daniel'&&v.lang==='en-GB')||
-    voices.find(v=>v.lang==='en-GB')||
-    voices.find(v=>v.lang==='en-US')||
-    voices[0];
-  if(v) utt.voice=v;
-  utt.rate=0.92; utt.pitch=0.90; utt.volume=1;
-
-  utt.onstart=()=>setPhase('speaking');
-
-  utt.onend=()=>{
-    // Agent finished speaking naturally — go back to listening
-    resumeListening();
-  };
-
-  utt.onerror=()=>{ resumeListening(); };
+  // Stop main recognition — bargeRec takes over
+  safeStopMain();
 
   setPhase('speaking');
+  // Start barge-in recognition
+  if(micActive) safeStartBarge();
+
+  try{
+    const res=await fetch('/tts',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text})
+    });
+
+    // If server returns fallback signal, use Web Speech API
+    if(res.headers.get('content-type')?.includes('application/json')){
+      const data=await res.json();
+      if(data.fallback) return speakWebSpeech(text);
+    }
+
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    currentAudio=new Audio(url);
+
+    currentAudio.onended=()=>{
+      URL.revokeObjectURL(url);
+      currentAudio=null;
+      onAgentFinished();
+    };
+    currentAudio.onerror=()=>{
+      currentAudio=null;
+      onAgentFinished();
+    };
+
+    await currentAudio.play();
+
+  } catch(e){
+    console.warn('TTS fetch failed, using Web Speech fallback:', e.message);
+    speakWebSpeech(text);
+  }
+}
+
+function speakWebSpeech(text){
+  if(!window.speechSynthesis){ onAgentFinished(); return; }
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  const voices=window.speechSynthesis.getVoices();
+  const v=voices.find(v=>v.name.includes('Google UK English Male'))||
+           voices.find(v=>v.name.includes('Microsoft David'))||
+           voices.find(v=>v.name==='Daniel'&&v.lang==='en-GB')||
+           voices.find(v=>v.lang==='en-GB')||
+           voices.find(v=>v.lang==='en-US')||voices[0];
+  if(v) utt.voice=v;
+  utt.rate=0.92; utt.pitch=0.90; utt.volume=1;
+  utt.onend=()=>onAgentFinished();
+  utt.onerror=()=>onAgentFinished();
   window.speechSynthesis.speak(utt);
 }
 
-function resumeListening(){
-  // Called after agent finishes OR after stopAgent
+function onAgentFinished(){
+  // Agent finished speaking naturally
+  safeStopBarge();
+  currentAudio=null;
+  // Apply cooldown before accepting operator input (prevents echo of last words)
+  cooldownUntil=Date.now()+COOLDOWN_MS;
   if(micActive){
     setPhase('listening');
-    safeStartRec();          // restart rec if it had drifted off
+    safeStartMain();
   } else {
     setPhase('idle');
   }
 }
 
-// Stop button AND voice barge-in both route here
 function stopAgent(thenRepeat){
-  if(window.speechSynthesis) window.speechSynthesis.cancel();
-  if(thenRepeat && lastAgentText){
-    // Small gap so cancel completes before new utterance
-    setTimeout(()=>speak(lastAgentText),250);
+  // Stop audio
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  // Stop barge-in recognition
+  safeStopBarge();
+  // Apply cooldown
+  cooldownUntil=Date.now()+COOLDOWN_MS;
+
+  if(thenRepeat&&lastAgentText){
+    setTimeout(()=>speak(lastAgentText),300);
   } else {
-    resumeListening();
+    if(micActive){
+      setPhase('listening');
+      safeStartMain();
+    } else {
+      setPhase('idle');
+    }
   }
 }
 
@@ -387,10 +469,9 @@ function stopAgent(thenRepeat){
 async function sendQuery(text){
   if(!text.trim()){ pendingQuery=false; return; }
   clearTimeout(silenceTimer);
-
-  // Move to processing — rec keeps running in background for barge-in detection
+  safeStopMain();
+  safeStopBarge();
   setPhase('processing');
-
   removeEmpty();
   addTurn('user',text);
   showTyping(true);
@@ -434,16 +515,25 @@ function setPhase(p){
   const stopBtn  =document.getElementById('stop-btn');
   const bargeHint=document.getElementById('barge-hint');
 
-  micBtn.className  ='mic-btn'  +(p==='listening'?' listening':p==='speaking'?' speaking':p==='processing'?' processing':'');
-  micWrap.className ='mic-wrap' +(p==='listening'?' listening':p==='speaking'?' speaking':'');
-  waveform.className='waveform' +(p==='listening'||p==='speaking'?' active':'')+(p==='speaking'?' speaking-wf':'');
-  stopBtn.className   ='stop-btn'  +(p==='speaking'?' visible':'');
-  bargeHint.className ='barge-hint'+(p==='speaking'?' visible':'');
+  // 'barge' is a visual sub-state for when bargeRec is active during speaking
+  const visual = (p==='speaking'&&micActive) ? 'barge' : p;
 
-  const labels={idle:'Press mic or type to begin',listening:'Listening...',processing:'Processing...',speaking:'Speaking...'};
+  micBtn.className  ='mic-btn '+visual;
+  micWrap.className ='mic-wrap '+visual;
+  waveform.className='waveform'+(visual==='listening'||visual==='barge'||visual==='speaking'?' active':'')+
+                     (visual==='speaking'?' speaking-wf':visual==='barge'?' barge-wf':'');
+  stopBtn.className   ='stop-btn'  +(p==='speaking'?' visible':'');
+  bargeHint.className ='barge-hint'+(p==='speaking'&&micActive?' visible':'');
+
+  const labels={
+    idle:       'Press mic or type to begin',
+    listening:  'Listening...',
+    processing: 'Processing...',
+    speaking:   micActive ? 'Speaking — say "stop" to interrupt' : 'Speaking...'
+  };
   const sl=document.getElementById('status-label');
   sl.textContent=labels[p]||'Ready';
-  sl.className='status-label '+p;
+  sl.className='status-label '+(visual==='barge'?'barge':p);
 }
 
 function setLabel(p,t){
@@ -451,7 +541,7 @@ function setLabel(p,t){
   sl.textContent=t; sl.className='status-label '+p;
 }
 
-// ─── DOM HELPERS ──────────────────────────────────────────────────────────────
+// ─── DOM ──────────────────────────────────────────────────────────────────────
 function addTurn(role,text){
   const conv=document.getElementById('conversation');
   const inner=conv.querySelector('.inner');
