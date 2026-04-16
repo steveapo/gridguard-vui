@@ -77,7 +77,7 @@ const manualData = {
 
 // ---- SESSION STATE ----
 
-let lastResponse = 'No previous response to repeat.';
+let lastResponse = 'No previous response stored.';
 
 // ---- HELPERS ----
 
@@ -273,7 +273,7 @@ app.post('/webhook', (req, res) => {
     reply(res, type ? procedureData[type] : 'Please specify: Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
 
   } else if (intent === 'emergency-procedures - next-step') {
-    reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Do you need me to repeat any step?');
+    reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Say the next step number if you need it again.');
 
   } else if (intent === 'resource-availability') {
     reply(res, 'Available resources: Generator G-3 on standby, fuel 87%. Three maintenance technicians on call. One spare transformer in storage. Emergency vehicle available.');
