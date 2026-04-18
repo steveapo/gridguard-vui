@@ -151,7 +151,10 @@ app.post('/chat', async (req, res) => {
     const dfResult = await callDialogflow(text, sessionId || 'web-session-001');
     const rawResponse = dfResult.queryResult?.fulfillmentText || 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.';
     const intent = dfResult.queryResult?.intent?.displayName || 'unknown';
-    const enhanced = await enhanceWithClaude(rawResponse);
+    // Skip Claude enhancement for short webhook guard prompts — they are already
+    // correctly phrased and Claude tends to over-elaborate them
+    const isPrompt = rawResponse.endsWith('?') && rawResponse.split(' ').length < 20;
+    const enhanced = isPrompt ? rawResponse : await enhanceWithClaude(rawResponse);
     res.json({ response: enhanced, intent, raw: rawResponse });
   } catch (err) {
     console.error('Chat error:', err.message);
