@@ -270,7 +270,27 @@ app.post('/webhook', (req, res) => {
     reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: ' + severity + '. Time: ' + time + '.');
 
   } else if (intent === 'emergency-procedures') {
-    const rawType = extractParam(params, 'procedure-type');
+    let rawType = extractParam(params, 'procedure-type');
+
+    // If no procedure type given, try to infer from active incident-context
+    if (!rawType) {
+      const outputContexts = req.body.queryResult.outputContexts || [];
+      const incidentCtx = outputContexts.find(c => c.name && c.name.includes('incident-context'));
+      if (incidentCtx && incidentCtx.parameters) {
+        const incidentType = extractParam(incidentCtx.parameters, 'incident-type');
+        const incidentMap = {
+          'fire':             'Transformer Fire',
+          'transformer fire': 'Transformer Fire',
+          'gas leak':         'Gas Leak Response',
+          'flooding':         'Flood Response',
+          'power outage':     'Evacuation',
+          'equipment fault':  'Electrical Isolation',
+          'safety breach':    'Evacuation',
+        };
+        if (incidentType) rawType = incidentMap[incidentType.toLowerCase()] || null;
+      }
+    }
+
     if (!rawType) return reply(res, 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
     const type = Object.keys(procedureData).find(k => k.toLowerCase() === rawType.toLowerCase());
     reply(res, type ? procedureData[type] : 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
