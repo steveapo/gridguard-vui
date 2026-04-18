@@ -262,6 +262,8 @@ app.post('/webhook', (req, res) => {
   } else if (intent === 'incident-reporting') {
     const zone = extractParam(params, 'zone');
     const type = extractParam(params, 'incident-type');
+    if (!zone) return reply(res, 'Which zone is the incident in?');
+    if (!type) return reply(res, 'What type of incident? Power Outage, Equipment Fault, Gas Leak, Fire, Flooding, or Safety Breach.');
     const severity = extractParam(params, 'severity') || 'Medium';
     const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
     const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
@@ -269,8 +271,9 @@ app.post('/webhook', (req, res) => {
 
   } else if (intent === 'emergency-procedures') {
     const rawType = extractParam(params, 'procedure-type');
-    const type = Object.keys(procedureData).find(k => k.toLowerCase() === (rawType || '').toLowerCase());
-    reply(res, type ? procedureData[type] : 'Please specify: Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
+    if (!rawType) return reply(res, 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
+    const type = Object.keys(procedureData).find(k => k.toLowerCase() === rawType.toLowerCase());
+    reply(res, type ? procedureData[type] : 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
 
   } else if (intent === 'emergency-procedures - next-step') {
     reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Say the next step number if you need it again.');
@@ -316,6 +319,7 @@ app.post('/webhook', (req, res) => {
 
   } else if (intent === 'equipment-manuals') {
     const eq = extractParam(params, 'equipment-id');
+    if (!eq) return reply(res, 'Which equipment? For example T-12, Generator G-3, or Feeder B-7.');
     reply(res, manualData[eq] || 'Manual not found. Contact maintenance on Extension 4420.');
 
   } else if (intent === 'repeat-last') {
