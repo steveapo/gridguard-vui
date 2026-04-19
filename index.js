@@ -1,38 +1,47 @@
 'use strict';
+
 const express = require('express');
 const path = require('path');
 const { Readable } = require('stream');
+
 const app = express();
 
+// Middleware setup
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use((req, res, next) => {
+
+// Allow cross-origin requests so the web interface can call this server
+app.use(function(req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 
-// ---- STATIC DATA ----
+// -------------------------------------------------------
+// Static data - simulates what a real SCADA system would return
+// -------------------------------------------------------
 
 const outageData = {
-  "Zone 1": { status: "operational", load: "72%", lastCheck: "2 hours ago" },
-  "Zone 2": { status: "operational", load: "65%", lastCheck: "1 hour ago" },
-  "Zone 3": { status: "operational", load: "80%", lastCheck: "30 minutes ago" },
-  "Zone 4": { status: "outage", severity: "High", eta: "2 hours 30 minutes", cause: "Feeder fault" },
-  "Zone 5": { status: "partial outage", severity: "Low", eta: "45 minutes", cause: "Scheduled maintenance" },
-  "Substation Alpha": { status: "operational", load: "78%", lastCheck: "6 hours ago" },
-  "Substation Beta": { status: "operational", load: "55%", lastCheck: "3 hours ago" }
+  "Zone 1":          { status: "operational",    load: "72%",  lastCheck: "2 hours ago" },
+  "Zone 2":          { status: "operational",    load: "65%",  lastCheck: "1 hour ago" },
+  "Zone 3":          { status: "operational",    load: "80%",  lastCheck: "30 minutes ago" },
+  "Zone 4":          { status: "outage",         severity: "High", eta: "2 hours 30 minutes", cause: "Feeder fault" },
+  "Zone 5":          { status: "partial outage", severity: "Low",  eta: "45 minutes",         cause: "Scheduled maintenance" },
+  "Substation Alpha":{ status: "operational",    load: "78%",  lastCheck: "6 hours ago" },
+  "Substation Beta": { status: "operational",    load: "55%",  lastCheck: "3 hours ago" }
 };
 
 const equipmentData = {
-  "Transformer T-12": { status: "fault", issue: "Overheating at 95 degrees C", action: "Isolate immediately" },
-  "Transformer T-07": { status: "operational", load: "70%", temp: "65 degrees C" },
-  "Feeder Line B-7": { status: "undervoltage", reading: "118 kV", nominal: "132 kV" },
-  "Generator G-3": { status: "standby", fuel: "87%", readiness: "Ready to deploy" },
-  "Switchgear SW-4": { status: "operational", lastTest: "7 days ago" },
-  "Pump Station P-1": { status: "operational", flow: "Normal", pressure: "4.2 bar" }
+  "Transformer T-12": { status: "fault",         issue: "Overheating at 95 degrees C", action: "Isolate immediately" },
+  "Transformer T-07": { status: "operational",   load: "70%",   temp: "65 degrees C" },
+  "Feeder Line B-7":  { status: "undervoltage",  reading: "118 kV", nominal: "132 kV" },
+  "Generator G-3":    { status: "standby",       fuel: "87%",   readiness: "Ready to deploy" },
+  "Switchgear SW-4":  { status: "operational",   lastTest: "7 days ago" },
+  "Pump Station P-1": { status: "operational",   flow: "Normal", pressure: "4.2 bar" }
 };
 
 const contactData = {
@@ -46,7 +55,9 @@ const contactData = {
 };
 
 const weatherData = {
-  alerts: [{ type: "High Wind", severity: "Yellow", detail: "70 km/h gusts expected until 22:00", action: "Secure outdoor equipment" }],
+  alerts: [
+    { type: "High Wind", severity: "Yellow", detail: "70 km/h gusts expected until 22:00", action: "Secure outdoor equipment" }
+  ],
   conditions: { temp: "18C", wind: "45 km/h", visibility: "Good" }
 };
 
@@ -75,117 +86,184 @@ const manualData = {
   "Pump Station P-1": "Manual reference PS-P1-v2. Section 3 covers operating pressure. Digital copy in /manuals/pumps/"
 };
 
-// ---- SESSION STATE ----
+// -------------------------------------------------------
+// Session state
+// -------------------------------------------------------
 
-let lastResponse = 'No previous response stored.';
+// Stores the last response so the repeat-last intent can retrieve it
+var lastResponse = 'No previous response stored.';
 
-// ---- HELPERS ----
+// -------------------------------------------------------
+// Helper functions
+// -------------------------------------------------------
 
-function reply(res, text) {
+// Sends a fulfillment response back to Dialogflow and saves it for repeat
+function sendReply(res, text) {
   lastResponse = text;
   res.json({ fulfillmentText: text });
 }
 
-function extractParam(params, key) {
-  const val = params[key];
-  return Array.isArray(val) ? val[0] : val;
+// Dialogflow sometimes sends entity values as arrays even for single values
+// This function handles both cases and always returns a plain string
+function getParam(params, key) {
+  var value = params[key];
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
 }
 
-// ---- DIALOGFLOW REST CALL ----
+// -------------------------------------------------------
+// Dialogflow detect intent (used by the web interface /chat endpoint)
+// -------------------------------------------------------
 
-async function callDialogflow(text, sessionId) {
-  const credentialsRaw = process.env.GOOGLE_CREDENTIALS;
-  const projectId = process.env.DIALOGFLOW_PROJECT_ID;
-  if (!credentialsRaw || !projectId) throw new Error('GOOGLE_CREDENTIALS or DIALOGFLOW_PROJECT_ID not set.');
+async function callDialogflow(userText, sessionId) {
+  var credentialsRaw = process.env.GOOGLE_CREDENTIALS;
+  var projectId = process.env.DIALOGFLOW_PROJECT_ID;
+
+  if (!credentialsRaw || !projectId) {
+    throw new Error('Missing GOOGLE_CREDENTIALS or DIALOGFLOW_PROJECT_ID environment variables.');
+  }
 
   const { GoogleAuth } = require('google-auth-library');
-  const credentials = JSON.parse(credentialsRaw);
-  const auth = new GoogleAuth({ credentials, scopes: ['https://www.googleapis.com/auth/dialogflow'] });
-  const accessToken = await auth.getAccessToken();
-
-  const url = `https://europe-west1-dialogflow.googleapis.com/v2/projects/${projectId}/locations/europe-west1/agent/sessions/${sessionId}:detectIntent`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ queryInput: { text: { text, languageCode: 'en' } } })
+  var credentials = JSON.parse(credentialsRaw);
+  var auth = new GoogleAuth({
+    credentials: credentials,
+    scopes: ['https://www.googleapis.com/auth/dialogflow']
   });
 
-  if (!response.ok) throw new Error(`Dialogflow API error: ${await response.text()}`);
+  var accessToken = await auth.getAccessToken();
+
+  // Using the europe-west1 regional endpoint since the agent is deployed there
+  var url = 'https://europe-west1-dialogflow.googleapis.com/v2/projects/' + projectId +
+            '/locations/europe-west1/agent/sessions/' + sessionId + ':detectIntent';
+
+  var response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      queryInput: {
+        text: {
+          text: userText,
+          languageCode: 'en'
+        }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('Dialogflow API error: ' + await response.text());
+  }
+
   return response.json();
 }
 
-// ---- CLAUDE ENHANCEMENT ----
+// -------------------------------------------------------
+// Claude enhancement (makes responses sound more natural)
+// This is part of the out-of-scope bonus web interface
+// -------------------------------------------------------
 
 async function enhanceWithClaude(fulfillmentText) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return fulfillmentText;
+  var apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    // If no API key is set, just return the original text
+    return fulfillmentText;
+  }
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  var response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 300,
-      system: `You are GridGuard, an AI voice assistant for emergency response in an energy utility control room. Rephrase the response below to sound more natural and human while following these strict rules:
-1. Never change any factual data — numbers, names, zones, ETAs must remain identical
-2. Keep responses concise — operators work under pressure and need fast answers
-3. Maintain a calm, authoritative tone — never casual or overly warm
-4. No greetings, closings, or filler phrases like "certainly" or "of course"
-5. Output only the rephrased response text — nothing else`,
+      system: 'You are GridGuard, a voice assistant for an energy utility control room. Rephrase the text below to sound more natural while keeping all facts identical. Use a calm, professional tone. No greetings, no filler phrases. Output only the rephrased text.',
       messages: [{ role: 'user', content: fulfillmentText }]
     })
   });
 
-  if (!response.ok) return fulfillmentText;
-  const data = await response.json();
-  return data.content?.[0]?.text || fulfillmentText;
+  if (!response.ok) {
+    return fulfillmentText;
+  }
+
+  var data = await response.json();
+  return data.content[0].text || fulfillmentText;
 }
 
-// ---- /chat ENDPOINT ----
+// -------------------------------------------------------
+// /chat endpoint - used by the bonus web interface
+// Sends user text to Dialogflow, then optionally enhances with Claude
+// -------------------------------------------------------
 
-app.post('/chat', async (req, res) => {
-  const { text, sessionId } = req.body;
-  if (!text) return res.status(400).json({ error: 'No text provided' });
+app.post('/chat', async function(req, res) {
+  var userText = req.body.text;
+  var sessionId = req.body.sessionId || 'web-session-001';
+
+  if (!userText) {
+    return res.status(400).json({ error: 'No text provided' });
+  }
 
   try {
-    const dfResult = await callDialogflow(text, sessionId || 'web-session-001');
-    const rawResponse = dfResult.queryResult?.fulfillmentText || 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.';
-    const intent = dfResult.queryResult?.intent?.displayName || 'unknown';
-    // Skip Claude enhancement for short webhook guard prompts — they are already
-    // correctly phrased and Claude tends to over-elaborate them
-    const isPrompt = rawResponse.endsWith('?') && rawResponse.split(' ').length < 20;
-    const enhanced = isPrompt ? rawResponse : await enhanceWithClaude(rawResponse);
-    res.json({ response: enhanced, intent, raw: rawResponse });
+    var dfResult = await callDialogflow(userText, sessionId);
+    var rawResponse = dfResult.queryResult.fulfillmentText ||
+                      'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.';
+    var intentName = dfResult.queryResult.intent.displayName || 'unknown';
+
+    // Short prompt questions (under 20 words ending in ?) do not need Claude enhancement
+    // because they are already phrased correctly and Claude tends to over-elaborate them
+    var wordCount = rawResponse.split(' ').length;
+    var isShortPrompt = rawResponse.endsWith('?') && wordCount < 20;
+
+    var finalResponse;
+    if (isShortPrompt) {
+      finalResponse = rawResponse;
+    } else {
+      finalResponse = await enhanceWithClaude(rawResponse);
+    }
+
+    res.json({ response: finalResponse, intent: intentName, raw: rawResponse });
+
   } catch (err) {
     console.error('Chat error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ---- /tts ENDPOINT — Azure Neural TTS streamed ----
+// -------------------------------------------------------
+// /tts endpoint - converts text to speech using Azure
+// Part of the bonus web interface
+// -------------------------------------------------------
 
-app.post('/tts', async (req, res) => {
-  const { text } = req.body;
-  if (!text) return res.status(400).json({ error: 'No text provided' });
+app.post('/tts', async function(req, res) {
+  var text = req.body.text;
+  if (!text) {
+    return res.status(400).json({ error: 'No text provided' });
+  }
 
-  const azureKey    = process.env.AZURE_TTS_KEY;
-  const azureRegion = process.env.AZURE_TTS_REGION;
+  var azureKey = process.env.AZURE_TTS_KEY;
+  var azureRegion = process.env.AZURE_TTS_REGION;
 
+  // If Azure credentials are not set, tell the client to use the browser TTS fallback
   if (!azureKey || !azureRegion) {
     return res.status(200).json({ fallback: true });
   }
 
   try {
-    const ssml = `<speak version='1.0' xml:lang='en-US'>
-      <voice name='en-US-AndrewMultilingualNeural'>
-        <prosody rate='+10%' pitch='-3%'>
-          ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-        </prosody>
-      </voice>
-    </speak>`;
+    // SSML lets us control the voice speed and pitch
+    var ssml = "<speak version='1.0' xml:lang='en-US'>" +
+               "<voice name='en-US-AndrewMultilingualNeural'>" +
+               "<prosody rate='+10%' pitch='-3%'>" +
+               text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+               "</prosody></voice></speak>";
 
-    const ttsRes = await fetch(
-      `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,
+    var ttsResponse = await fetch(
+      'https://' + azureRegion + '.tts.speech.microsoft.com/cognitiveservices/v1',
       {
         method: 'POST',
         headers: {
@@ -197,14 +275,15 @@ app.post('/tts', async (req, res) => {
       }
     );
 
-    if (!ttsRes.ok) {
-      console.error('Azure TTS error:', await ttsRes.text());
+    if (!ttsResponse.ok) {
+      console.error('Azure TTS error:', await ttsResponse.text());
       return res.status(200).json({ fallback: true });
     }
 
+    // Stream the audio directly to the client instead of buffering it first
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'no-store');
-    Readable.fromWeb(ttsRes.body).pipe(res);
+    Readable.fromWeb(ttsResponse.body).pipe(res);
 
   } catch (err) {
     console.error('TTS error:', err.message);
@@ -212,149 +291,231 @@ app.post('/tts', async (req, res) => {
   }
 });
 
-// ---- /status ENDPOINT ----
+// -------------------------------------------------------
+// /status endpoint - returns data for the web interface status panels
+// -------------------------------------------------------
 
-app.get('/status', (req, res) => {
+app.get('/status', function(req, res) {
   res.json({ outageData, equipmentData, weatherData, shiftData });
 });
 
-// ---- WEBHOOK HANDLER ----
+// -------------------------------------------------------
+// /webhook endpoint - main Dialogflow fulfillment handler
+// Dialogflow calls this after it classifies an intent
+// -------------------------------------------------------
 
-app.post('/webhook', (req, res) => {
-  const intent = req.body.queryResult.intent.displayName;
-  const params = req.body.queryResult.parameters;
+app.post('/webhook', function(req, res) {
+  var intent = req.body.queryResult.intent.displayName;
+  var params = req.body.queryResult.parameters;
 
+  // ---- Outage Status ----
   if (intent === 'outage-status') {
-    const zone = extractParam(params, 'zone');
+    var zone = getParam(params, 'zone');
+
     if (zone && outageData[zone]) {
-      const d = outageData[zone];
-      if (d.status === 'outage') {
-        reply(res, 'Active outage in ' + zone + '. Severity: ' + d.severity + '. ETA: ' + d.eta + '. Cause: ' + d.cause + '. Do you want to log an incident?');
-      } else if (d.status === 'partial outage') {
-        reply(res, zone + ' has a partial outage. Severity: ' + d.severity + '. ETA: ' + d.eta + '. Cause: ' + d.cause + '.');
+      var zoneData = outageData[zone];
+      if (zoneData.status === 'outage') {
+        sendReply(res, 'Active outage in ' + zone + '. Severity: ' + zoneData.severity + '. ETA: ' + zoneData.eta + '. Cause: ' + zoneData.cause + '. Do you want to log an incident?');
+      } else if (zoneData.status === 'partial outage') {
+        sendReply(res, zone + ' has a partial outage. Severity: ' + zoneData.severity + '. ETA: ' + zoneData.eta + '. Cause: ' + zoneData.cause + '.');
       } else {
-        reply(res, zone + ' is operational. Load: ' + d.load + '. Last checked: ' + d.lastCheck + '.');
+        sendReply(res, zone + ' is operational. Load: ' + zoneData.load + '. Last checked: ' + zoneData.lastCheck + '.');
       }
     } else {
-      const active = Object.keys(outageData).filter(k => outageData[k].status !== 'operational').map(k => k + ': ' + outageData[k].status + ', ETA ' + outageData[k].eta);
-      reply(res, active.length > 0 ? 'Active outages: ' + active.join('. ') + '.' : 'No active outages. All zones operational.');
+      // No zone specified - return all active outages
+      var activeOutages = [];
+      for (var z in outageData) {
+        if (outageData[z].status !== 'operational') {
+          activeOutages.push(z + ': ' + outageData[z].status + ', ETA ' + outageData[z].eta);
+        }
+      }
+      if (activeOutages.length > 0) {
+        sendReply(res, 'Active outages: ' + activeOutages.join('. ') + '.');
+      } else {
+        sendReply(res, 'No active outages. All zones operational.');
+      }
     }
 
+  // ---- Report Incident (follow-up after outage query) ----
   } else if (intent === 'outage-status - report-incident') {
-    const zone = extractParam(params, 'zone') || 'the affected zone';
-    const type = extractParam(params, 'incident-type') || 'Power Outage';
-    const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
-    const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
-    reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: High. Time: ' + time + '.');
+    var zone = getParam(params, 'zone') || 'the affected zone';
+    var incidentType = getParam(params, 'incident-type') || 'Power Outage';
+    var incidentId = 'INC-' + Math.floor(1000 + Math.random() * 9000);
+    var timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    sendReply(res, 'Incident logged. ID: ' + incidentId + '. Location: ' + zone + '. Type: ' + incidentType + '. Severity: High. Time: ' + timestamp + '.');
 
+  // ---- Equipment Status ----
   } else if (intent === 'equipment-status') {
-    const eq = extractParam(params, 'equipment-id');
-    if (eq && equipmentData[eq]) {
-      const d = equipmentData[eq];
-      if (d.status === 'fault') {
-        reply(res, 'Alert: ' + eq + ' fault. Issue: ' + d.issue + '. Action: ' + d.action + '.');
-      } else if (d.status === 'undervoltage') {
-        reply(res, eq + ' undervoltage. Reading: ' + d.reading + '. Nominal: ' + d.nominal + '.');
+    var equipId = getParam(params, 'equipment-id');
+
+    if (equipId && equipmentData[equipId]) {
+      var equip = equipmentData[equipId];
+      if (equip.status === 'fault') {
+        sendReply(res, 'Alert: ' + equipId + ' fault. Issue: ' + equip.issue + '. Action: ' + equip.action + '.');
+      } else if (equip.status === 'undervoltage') {
+        sendReply(res, equipId + ' undervoltage. Reading: ' + equip.reading + '. Nominal: ' + equip.nominal + '.');
       } else {
-        reply(res, eq + ' is ' + d.status + '.');
+        sendReply(res, equipId + ' is ' + equip.status + '.');
       }
     } else {
-      reply(res, 'Please specify an equipment ID such as Transformer T-12 or Generator G-3.');
+      sendReply(res, 'Please specify an equipment ID such as Transformer T-12 or Generator G-3.');
     }
 
+  // ---- Incident Reporting ----
   } else if (intent === 'incident-reporting') {
-    const zone = extractParam(params, 'zone');
-    const type = extractParam(params, 'incident-type');
-    if (!zone) return reply(res, 'Which zone is the incident in?');
-    if (!type) return reply(res, 'What type of incident? Power Outage, Equipment Fault, Gas Leak, Fire, Flooding, or Safety Breach.');
-    const severity = extractParam(params, 'severity') || 'Medium';
-    const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
-    const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
-    reply(res, 'Incident logged. ID: ' + id + '. Location: ' + zone + '. Type: ' + type + '. Severity: ' + severity + '. Time: ' + time + '.');
+    var zone = getParam(params, 'zone');
+    var incidentType = getParam(params, 'incident-type');
 
+    // Guard: if required parameters are missing, prompt for them
+    // Native Dialogflow slot filling was not working reliably so this is handled here
+    if (!zone) {
+      return sendReply(res, 'Which zone is the incident in?');
+    }
+    if (!incidentType) {
+      return sendReply(res, 'What type of incident? Power Outage, Equipment Fault, Gas Leak, Fire, Flooding, or Safety Breach.');
+    }
+
+    var severity = getParam(params, 'severity') || 'Medium';
+    var incidentId = 'INC-' + Math.floor(1000 + Math.random() * 9000);
+    var timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    sendReply(res, 'Incident logged. ID: ' + incidentId + '. Location: ' + zone + '. Type: ' + incidentType + '. Severity: ' + severity + '. Time: ' + timestamp + '.');
+
+  // ---- Emergency Procedures ----
   } else if (intent === 'emergency-procedures') {
-    let rawType = extractParam(params, 'procedure-type');
+    var procedureType = getParam(params, 'procedure-type');
 
-    // If no procedure type given, try to infer from active incident-context
-    if (!rawType) {
-      const outputContexts = req.body.queryResult.outputContexts || [];
-      const incidentCtx = outputContexts.find(c => c.name && c.name.includes('incident-context'));
-      if (incidentCtx && incidentCtx.parameters) {
-        const incidentType = extractParam(incidentCtx.parameters, 'incident-type');
-        const incidentMap = {
-          'fire':             'Transformer Fire',
-          'transformer fire': 'Transformer Fire',
-          'gas leak':         'Gas Leak Response',
-          'flooding':         'Flood Response',
-          'power outage':     'Evacuation',
-          'equipment fault':  'Electrical Isolation',
-          'safety breach':    'Evacuation',
-        };
-        if (incidentType) rawType = incidentMap[incidentType.toLowerCase()] || null;
+    // If the operator did not specify a procedure type, check whether an incident
+    // was just logged - if so we can infer the relevant procedure from the context
+    if (!procedureType) {
+      var activeContexts = req.body.queryResult.outputContexts || [];
+      for (var i = 0; i < activeContexts.length; i++) {
+        if (activeContexts[i].name && activeContexts[i].name.includes('incident-context')) {
+          var ctxParams = activeContexts[i].parameters;
+          var loggedType = getParam(ctxParams, 'incident-type');
+          if (loggedType) {
+            loggedType = loggedType.toLowerCase();
+            // Map incident types to the matching procedure
+            if (loggedType === 'fire' || loggedType === 'transformer fire') {
+              procedureType = 'Transformer Fire';
+            } else if (loggedType === 'gas leak') {
+              procedureType = 'Gas Leak Response';
+            } else if (loggedType === 'flooding') {
+              procedureType = 'Flood Response';
+            } else if (loggedType === 'power outage') {
+              procedureType = 'Evacuation';
+            } else if (loggedType === 'equipment fault') {
+              procedureType = 'Electrical Isolation';
+            } else if (loggedType === 'safety breach') {
+              procedureType = 'Evacuation';
+            }
+          }
+          break;
+        }
       }
     }
 
-    if (!rawType) return reply(res, 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
-    const type = Object.keys(procedureData).find(k => k.toLowerCase() === rawType.toLowerCase());
-    reply(res, type ? procedureData[type] : 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
+    if (!procedureType) {
+      return sendReply(res, 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
+    }
 
+    // Find the procedure - case insensitive match
+    var matchedProcedure = null;
+    var procedureKeys = Object.keys(procedureData);
+    for (var i = 0; i < procedureKeys.length; i++) {
+      if (procedureKeys[i].toLowerCase() === procedureType.toLowerCase()) {
+        matchedProcedure = procedureData[procedureKeys[i]];
+        break;
+      }
+    }
+
+    if (matchedProcedure) {
+      sendReply(res, matchedProcedure);
+    } else {
+      sendReply(res, 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
+    }
+
+  // ---- Emergency Procedure Next Step ----
   } else if (intent === 'emergency-procedures - next-step') {
-    reply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Say the next step number if you need it again.');
+    sendReply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Say the next step number if you need it again.');
 
+  // ---- Resource Availability ----
   } else if (intent === 'resource-availability') {
-    reply(res, 'Available resources: Generator G-3 on standby, fuel 87%. Three maintenance technicians on call. One spare transformer in storage. Emergency vehicle available.');
+    sendReply(res, 'Available resources: Generator G-3 on standby, fuel 87%. Three maintenance technicians on call. One spare transformer in storage. Emergency vehicle available.');
 
+  // ---- Contact Directory ----
   } else if (intent === 'contact-directory') {
-    const shift = extractParam(params, 'shift-period') || 'Current Shift';
-    const d = contactData[shift];
-    if (d) {
-      // Emergency Hotline — returns a number, not a name/extension
-      if (d.number) {
-        reply(res, 'Emergency hotline: ' + d.number + '.');
-      // Safety Officer or Maintenance Team lead
+    var shiftPeriod = getParam(params, 'shift-period') || 'Current Shift';
+    var contact = contactData[shiftPeriod];
+
+    if (contact) {
+      if (contact.number) {
+        // Emergency Hotline returns a phone number, not a name
+        sendReply(res, 'Emergency hotline: ' + contact.number + '.');
       } else {
-        const name = d.supervisor || d.name || d.lead;
-        reply(res, shift + ': ' + name + '. Extension: ' + d.extension + '.');
+        var contactName = contact.supervisor || contact.name || contact.lead;
+        sendReply(res, shiftPeriod + ': ' + contactName + '. Extension: ' + contact.extension + '.');
       }
     } else {
-      // No entity extracted — return current shift summary plus hotline
-      reply(res, 'Current supervisor: ' + contactData['Current Shift'].supervisor + '. Extension: ' + contactData['Current Shift'].extension + '. Emergency hotline: ' + contactData['Emergency Hotline'].number + '.');
+      // Default: return current shift supervisor and hotline
+      var current = contactData['Current Shift'];
+      var hotline = contactData['Emergency Hotline'];
+      sendReply(res, 'Current supervisor: ' + current.supervisor + '. Extension: ' + current.extension + '. Emergency hotline: ' + hotline.number + '.');
     }
 
+  // ---- Safety Protocols ----
   } else if (intent === 'safety-protocols') {
-    const zone = extractParam(params, 'zone');
-    const z = zone ? ' for ' + zone : '';
-    reply(res, 'Safety protocols' + z + ': 1) Wear correct PPE. 2) Apply lockout and tagout before maintenance. 3) Never enter high voltage areas alone. 4) Report all hazards immediately.');
+    var zone = getParam(params, 'zone');
+    var zoneText = zone ? ' for ' + zone : '';
+    sendReply(res, 'Safety protocols' + zoneText + ': 1) Wear correct PPE. 2) Apply lockout and tagout before maintenance. 3) Never enter high voltage areas alone. 4) Report all hazards immediately.');
 
+  // ---- Weather Alerts ----
   } else if (intent === 'weather-alerts') {
     if (weatherData.alerts.length > 0) {
-      const a = weatherData.alerts[0];
-      reply(res, 'Weather alert: ' + a.type + '. Severity: ' + a.severity + '. ' + a.detail + '. Action: ' + a.action + '.');
+      var alert = weatherData.alerts[0];
+      sendReply(res, 'Weather alert: ' + alert.type + '. Severity: ' + alert.severity + '. ' + alert.detail + '. Action: ' + alert.action + '.');
     } else {
-      const c = weatherData.conditions;
-      reply(res, 'No active alerts. Conditions: ' + c.temp + ', wind ' + c.wind + ', visibility ' + c.visibility + '.');
+      var conditions = weatherData.conditions;
+      sendReply(res, 'No active alerts. Conditions: ' + conditions.temp + ', wind ' + conditions.wind + ', visibility ' + conditions.visibility + '.');
     }
 
+  // ---- Shift Information ----
   } else if (intent === 'shift-information') {
-    const shift = extractParam(params, 'shift-period') || 'Current Shift';
-    const d = shiftData[shift] || shiftData['Current Shift'];
-    reply(res, shift + ': ' + d.type + ' shift. ' + d.start + ' to ' + d.end + '. Crew: ' + d.crew + '. Supervisor: ' + d.supervisor + '.');
+    var shiftPeriod = getParam(params, 'shift-period') || 'Current Shift';
+    var shift = shiftData[shiftPeriod] || shiftData['Current Shift'];
+    sendReply(res, shiftPeriod + ': ' + shift.type + ' shift. ' + shift.start + ' to ' + shift.end + '. Crew: ' + shift.crew + '. Supervisor: ' + shift.supervisor + '.');
 
+  // ---- Equipment Manuals ----
   } else if (intent === 'equipment-manuals') {
-    const eq = extractParam(params, 'equipment-id');
-    if (!eq) return reply(res, 'Which equipment? For example T-12, Generator G-3, or Feeder B-7.');
-    reply(res, manualData[eq] || 'Manual not found. Contact maintenance on Extension 4420.');
+    var equipId = getParam(params, 'equipment-id');
+    if (!equipId) {
+      return sendReply(res, 'Which equipment? For example T-12, Generator G-3, or Feeder B-7.');
+    }
+    var manual = manualData[equipId];
+    if (manual) {
+      sendReply(res, manual);
+    } else {
+      sendReply(res, 'Manual not found. Contact maintenance on Extension 4420.');
+    }
 
+  // ---- Repeat Last Response ----
   } else if (intent === 'repeat-last') {
-    reply(res, lastResponse);
+    sendReply(res, lastResponse);
 
+  // ---- Agent Capabilities ----
   } else if (intent === 'agent-capabilities') {
-    reply(res, 'I can help with ten query types: outage status, equipment status, incident reporting, emergency procedures, resource availability, contact directory, safety protocols, weather alerts, shift information, and equipment manuals. Which do you need?');
+    sendReply(res, 'I can help with ten query types: outage status, equipment status, incident reporting, emergency procedures, resource availability, contact directory, safety protocols, weather alerts, shift information, and equipment manuals. Which do you need?');
 
+  // ---- Fallback ----
   } else {
-    reply(res, 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.');
+    sendReply(res, 'Query not recognised. I can help with outages, equipment, incidents, emergency procedures, contacts, safety, weather, shift info, or manuals.');
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('GridGuard fulfillment running on port ' + PORT));
+// -------------------------------------------------------
+// Start server
+// -------------------------------------------------------
+
+var PORT = process.env.PORT || 3000;
+app.listen(PORT, function() {
+  console.log('GridGuard fulfillment server running on port ' + PORT);
+});
