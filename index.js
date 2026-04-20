@@ -420,7 +420,7 @@ app.post('/webhook', function(req, res) {
       return sendReply(res, 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
     }
 
-    // Find the procedure - case insensitive match
+    // Find the procedure case insensitive match
     var matchedProcedure = null;
     var procedureKeys = Object.keys(procedureData);
     for (var i = 0; i < procedureKeys.length; i++) {
@@ -436,7 +436,7 @@ app.post('/webhook', function(req, res) {
       sendReply(res, 'Which procedure? Evacuation, Transformer Fire, Gas Leak Response, Electrical Isolation, Flood Response, or First Aid.');
     }
 
-  // ---- Emergency Procedure Next Step ----
+  // ---- Emergency Procedure Next Step----
   } else if (intent === 'emergency-procedures - next-step') {
     sendReply(res, 'Step 2: Activate the CO2 suppression system if available. Step 3: Contact emergency services. Follow your site evacuation plan. Say the next step number if you need it again.');
 
@@ -480,7 +480,7 @@ app.post('/webhook', function(req, res) {
       sendReply(res, 'No active alerts. Conditions: ' + conditions.temp + ', wind ' + conditions.wind + ', visibility ' + conditions.visibility + '.');
     }
 
-  // ---- Shift Information ----
+  // --- Shift Information ---
   } else if (intent === 'shift-information') {
     var shiftPeriod = getParam(params, 'shift-period') || 'Current Shift';
     var shift = shiftData[shiftPeriod] || shiftData['Current Shift'];
