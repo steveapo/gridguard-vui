@@ -6,6 +6,19 @@
   <title>GridGuard</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
+    /* 
+    After discussing with some students I think it's important to make some clarifications:
+    1. Ternary operations are not an AI exclusive thing... I have been using them since 2017 thanks to C++
+    2. The sections are labelled so I can make it explicitly clear which aspects are AI-assisted versus which ones are Templates (assets)
+    versus which ones are written by me (if there's no 'AI' or 'TEMPLATE' comment its mine).
+    3. I have provided short explanations for some AI-assisted code, but in the spirit of absolute clarity and transparency they may be
+    unacademic (e.g. I was lazy / I had no clue how to implement it etc) -> that's because it's the truth and I don't want to sugarcoat it
+    4. Should any concerns be raised regarding the use of AI, and if possible according to your guidelines, I would appreciate your
+    complete omittance of the Web interface, the Dialogflow setup covers all deliverables standalone
+    */
+
+    /* THE ENTIRE STYLING IS DONE BY AI! I truly didn't have the time and brainpower to bother with the styling */
+    
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     [data-theme="dark"] {
@@ -43,8 +56,8 @@
     }
 
     html,body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-weight:300; overflow:hidden; transition:background .3s,color .3s; }
-
-    /* ── PAGE SHELL ─────────────────────────────────────────────────────────── */
+    
+    /* PAGE SHELL */
     /* Outer shell: full viewport, column layout */
     .shell {
       display: flex;
@@ -76,11 +89,11 @@
     .meta-item { font-family:'DM Mono',monospace; font-size:12px; color:var(--text-mid); letter-spacing:.06em; display:flex; align-items:center; gap:7px; }
     .live-dot { width:7px; height:7px; border-radius:50%; background:var(--ok); animation:breathe 2.4s ease-in-out infinite; }
 
-    /* BODY ROW — sidebar + right column */
+    /* BODY ROW (sidebar + right column) */
     .body-row {
       flex: 1;
       display: flex;
-      min-height: 0; /* critical: lets flex children shrink */
+      min-height: 0; /* critical: lets flex children shrink otherwise layout breaks and its non-responsive */
     }
 
     /* SIDEBAR */
@@ -105,7 +118,7 @@
     .query-card-title { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.12em; color:var(--text-mid); margin-bottom:3px; }
     .query-card-example { font-size:12px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4; }
 
-    /* RIGHT COLUMN — conversation + control panel stacked */
+    /* RIGHT COLUMN (conversation + control panel stacked) */
     .right-col {
       flex: 1;
       display: flex;
@@ -150,13 +163,13 @@
       background: var(--bg);
       display: flex;
       flex-direction: column;
-      align-items: center;        /* centers children horizontally */
+      align-items: center; /* centers children horizontally */
       justify-content: center;
       gap: 10px;
       padding: 20px 36px;
     }
 
-    /* MIC */
+    /* MIC -> THIS IS FROM A TEMPLATE */
     .mic-wrap { position:relative; width:80px; height:80px; flex-shrink:0; }
     .mic-pulse { position:absolute; inset:-12px; border-radius:50%; border:1.5px solid var(--ok); opacity:0; pointer-events:none; }
     .mic-wrap.listening .mic-pulse { animation:pulseSlow 1.8s ease-out infinite; }
@@ -181,7 +194,7 @@
     .mic-btn.speaking   svg { color:var(--blue); }
     .mic-btn.processing svg { color:var(--warn); }
 
-    /* STATUS */
+    /* STATUS -> THIS IS FROM A TEMPLATE  */
     .status-block { display:flex; flex-direction:column; align-items:center; gap:7px; }
     .status-label { display:flex; align-items:center; gap:8px; font-family:'DM Mono',monospace; font-size:13px; letter-spacing:.1em; color:var(--text-dim); transition:color .2s; }
     .status-label.listening  { color:var(--ok); }
@@ -201,7 +214,7 @@
     .action-hints.visible { opacity:1; }
     .action-hint { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.1em; color:var(--text-dim); background:var(--surface-hi); border:1px solid var(--border); padding:3px 10px; border-radius:3px; }
 
-    /* INPUT — full width of panel minus padding */
+    /* INPUT (full width of panel minus padding) */
     .input-row {
       width: 100%;
       display: flex;
@@ -246,7 +259,7 @@
     .txt-send.stop-mode { color:var(--stop-text); border-left-color:var(--stop-border); background:var(--stop-bg); }
     .txt-send.stop-mode:hover { background:rgba(248,113,113,0.18); }
 
-    /* ANIMATIONS */
+    /* ANIMATIONS -> THESE ARE AI, I REALLY COULDN'T BOTHER WITH FINE-TUNING I APOLOGIZE! */
     @keyframes breathe  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.8)} }
     @keyframes fadeUp   { to{opacity:1;transform:translateY(0)} }
     @keyframes typingDot{ 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
@@ -384,164 +397,574 @@
 
 </div><!-- /shell -->
 
+
 <script>
-let micActive=false,phase='idle',mainRec=null,bargeRec=null,mainRunning=false,bargeRunning=false;
-let speechSupported=false,sessionId='web-'+Date.now(),lastAgentText='',silenceTimer=null;
-let interimText='',pendingQuery=false,currentAudio=null,cooldownUntil=0,bargeHandling=false;
-const STOP_WORDS=['stop','halt','quiet','silence','enough'];
-const REPEAT_WORDS=['repeat','repeat that','say that again','again','what did you say'];
-const COOLDOWN_MS=600;
+// -- State variables --
+// These track whether the mic is on, what the interface is doing,
+// and references to the two speech recognition instances (yes I use tab to align my comments, my sanity is important to me)
 
-function setTheme(t){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.t===t));localStorage.setItem('gg-theme',t);}
-(()=>setTheme(localStorage.getItem('gg-theme')||'dark'))();
+var micActive = false;               // true when the mic button has been pressed and is active
+var phase = 'idle';                  // current state: idle, listening, processing, speaking
+var mainRec = null;                  // main recognition instance - captures operator queries
+var bargeRec = null;                 // barge-in recognition instance - listens for stop/repeat while agent speaks
+var mainRunning = false;             // tracks whether mainRec has been started
+var bargeRunning = false;            // tracks whether bargeRec has been started
+var speechSupported = false;         // set to true if the browser supports Web Speech API
+var sessionId = 'web-' + Date.now(); // unique session ID for Dialogflow context tracking
+var lastAgentText = '';              // stores the last response so the repeat command can replay it
+var silenceTimer = null;             // timer that fires a query after 2 seconds of silence
+var interimText = '';                // holds partial (not-yet-final) speech recognition results
+var pendingQuery = false;            // prevents duplicate queries from being sent at the same time
+var currentAudio = null;             // reference to the currently playing Audio object
+var cooldownUntil = 0;               // timestamp, microphone is blocked until this time after speaking
+var bargeHandling = false;           // prevents multiple barge-in commands from firing at once
 
-setInterval(()=>document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC',1000);
-document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC';
+// Words that stop the agent when detected during playback
+var STOP_WORDS = ['stop', 'halt', 'quiet', 'silence', 'enough'];
 
-function initSpeech(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){updateStatusText('idle','Voice unavailable — use text input');return;}
-  speechSupported=true;
-  mainRec=new SR();mainRec.continuous=true;mainRec.interimResults=true;mainRec.lang='en-US';mainRec.maxAlternatives=1;
-  mainRec.onstart=()=>{mainRunning=true;};
-  mainRec.onresult=(e)=>{
-    if(!micActive||phase==='speaking'||Date.now()<cooldownUntil)return;
-    let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript.trim();if(e.results[i].isFinal)final+=t;else interim+=t;}
-    interimText=interim;
-    if(final){clearTimeout(silenceTimer);interimText='';if(!pendingQuery){pendingQuery=true;sendQuery(final);}}
-    else if(interim.length>3){clearTimeout(silenceTimer);silenceTimer=setTimeout(()=>{if(interimText&&phase==='listening'&&!pendingQuery&&Date.now()>=cooldownUntil){const t=interimText;interimText='';pendingQuery=true;sendQuery(t);}},2000);}
+// Words that replay the last response when detected during playback
+var REPEAT_WORDS = ['repeat', 'repeat that', 'say that again', 'again', 'what did you say'];
+
+// How long (in ms) to block the mic after the agent finishes speaking
+// This absorbs any audio tail that the microphone might pick up, if this is reduced
+// and depending on the connectivity of the user it might omit some command or cut-off information
+var COOLDOWN_MS = 600;
+
+// -- Theme switching --> THIS IS AI because I was lazy --
+// Saves the selected theme to localStorage so it persists across page loads
+
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  var buttons = document.querySelectorAll('.theme-btn');
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].classList.toggle('active', buttons[i].dataset.t === t);
+  }
+  localStorage.setItem('gg-theme', t);
+}
+
+(function() {
+  setTheme(localStorage.getItem('gg-theme') || 'dark'); // stores the theme to localStorage
+})();
+
+function updateClock() { // updates the clock every second
+  document.getElementById('clock').textContent = new Date().toUTCString().slice(17, 25) + ' UTC';
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// -- Speech Recognition Setup --
+// This is the main setup function for voice input. It creates two separate
+// recognition instances: one for the operator's queries and one that runs
+// in the background while the agent is speaking to detect barge-in commands.
+
+// The dual-instance approach was necessary because a single recognition
+// instance kept picking up the agent's own audio and submitting it as
+// a new query, creating a never-ending loop (and burning through my Claude API 5$ budget...)
+
+// This is AI-assisted, I tried to be as explicit as possible for which parts exactly
+
+// <mine>
+function initSpeech() { 
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SR) {
+    updateStatusText('idle', 'Voice unavailable — use text input');
+    return;
+  } 
+
+  speechSupported = true;
+
+  // Main recognition instance, it captures what the operator says
+  mainRec = new SR();
+  mainRec.continuous = true;
+  mainRec.interimResults = true;
+  mainRec.lang = 'en-US';
+  mainRec.maxAlternatives = 1;
+
+  mainRec.onstart = function() {
+    mainRunning = true;
   };
-  mainRec.onerror=(e)=>{mainRunning=false;if(e.error==='aborted'||e.error==='no-speech')safeStartMain();};
-  mainRec.onend=()=>{mainRunning=false;if(micActive&&phase!=='speaking')safeStartMain();};
 
-  bargeRec=new SR();bargeRec.continuous=true;bargeRec.interimResults=true;bargeRec.lang='en-US';bargeRec.maxAlternatives=1;
-  bargeRec.onstart=()=>{bargeRunning=true;};
-  bargeRec.onresult=(e)=>{
-    if(phase!=='speaking'||bargeHandling)return;
-    let c='';for(let i=e.resultIndex;i<e.results.length;i++)c+=e.results[i][0].transcript.toLowerCase()+' ';
-    if(STOP_WORDS.some(w=>c.includes(w))){bargeHandling=true;stopAgent(false);return;}
-    if(REPEAT_WORDS.some(w=>c.includes(w))){bargeHandling=true;stopAgent(true);return;}
+  mainRec.onresult = function(e) {
+    // Ignore results while the agent is speaking or during cooldown
+    if (!micActive || phase === 'speaking' || Date.now() < cooldownUntil) return;
+
+    var interim = '';
+    var final = '';
+
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      var transcript = e.results[i][0].transcript.trim();
+      if (e.results[i].isFinal) {
+        final += transcript;
+      } else {
+        interim += transcript;
+      }
+    }
+
+    interimText = interim;
+
+    if (final) {
+      // Final result received, we  send it immediately because there's already delays due to my poor TTS Azure Region setup
+      clearTimeout(silenceTimer);
+      interimText = '';
+      if (!pendingQuery) {
+        pendingQuery = true;
+        sendQuery(final);
+      }
+    } else if (interim.length > 3) {
+      // Interim result, wait 2 seconds of silence before sending (following OpenAI's technique for ChatGPT's voice mode)
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(function() {
+        if (interimText && phase === 'listening' && !pendingQuery && Date.now() >= cooldownUntil) {
+          var text = interimText;
+          interimText = '';
+          pendingQuery = true;
+          sendQuery(text);
+        }
+      }, 2000);
+    }
   };
-  bargeRec.onerror=(e)=>{bargeRunning=false;if(e.error!=='aborted'&&phase==='speaking'&&micActive)safeStartBarge();};
-  bargeRec.onend=()=>{bargeRunning=false;if(phase==='speaking'&&micActive)safeStartBarge();};
+
+  mainRec.onerror = function(e) {
+    mainRunning = false;
+    // Restart on common non-fatal errors --> AI recommendation
+    if (e.error === 'aborted' || e.error === 'no-speech') safeStartMain();
+  };
+
+  mainRec.onend = function() {
+    mainRunning = false;
+    // Keep restarting as long as mic is active and agent is not speaking
+    if (micActive && phase !== 'speaking') safeStartMain();
+  };
+  // </mine>
+  
+  // Barge-in recognition instance it only listens for "stop"/"repeat" keywords
+  // while the agent is playing audio, everything else is ignored.
+  
+  // <Only AI>
+  bargeRec = new SR();
+  bargeRec.continuous = true;
+  bargeRec.interimResults = true;
+  bargeRec.lang = 'en-US';
+  bargeRec.maxAlternatives = 1;
+
+  bargeRec.onstart = function() {
+    bargeRunning = true;
+  };
+
+  bargeRec.onresult = function(e) {
+    if (phase !== 'speaking' || bargeHandling) return;
+
+    // Collect all transcripts into one string for keyword matching
+    var combined = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      combined += e.results[i][0].transcript.toLowerCase() + ' ';
+    }
+
+    // Check for stop words
+    for (var i = 0; i < STOP_WORDS.length; i++) {
+      if (combined.includes(STOP_WORDS[i])) {
+        bargeHandling = true;
+        stopAgent(false);
+        return;
+      }
+    }
+
+    // Check for repeat words
+    for (var i = 0; i < REPEAT_WORDS.length; i++) {
+      if (combined.includes(REPEAT_WORDS[i])) {
+        bargeHandling = true;
+        stopAgent(true);
+        return;
+      }
+    }
+  };
+
+  bargeRec.onerror = function(e) {
+    bargeRunning = false;
+    if (e.error !== 'aborted' && phase === 'speaking' && micActive) safeStartBarge();
+  };
+
+  bargeRec.onend = function() {
+    bargeRunning = false;
+    if (phase === 'speaking' && micActive) safeStartBarge();
+  };
+}
+// </AI>
+  
+// -- Safe start/stop helpers --
+// These check state before starting or stopping recognition to avoid
+// errors from calling .start() on an already-running instance
+// <AI-assisted>
+function safeStartMain() {
+  if (!speechSupported || !micActive || mainRunning || phase === 'speaking') return; 
+  setTimeout(function() {
+    if (!micActive || mainRunning || phase === 'speaking') return;
+    try { mainRec.start(); } catch(e) {}
+  }, 120); 
 }
 
-function safeStartMain(){if(!speechSupported||!micActive||mainRunning||phase==='speaking')return;setTimeout(()=>{if(!micActive||mainRunning||phase==='speaking')return;try{mainRec.start();}catch(e){}},120);}
-function safeStartBarge(){if(!speechSupported||!micActive||bargeRunning)return;setTimeout(()=>{if(!micActive||bargeRunning)return;try{bargeRec.start();}catch(e){}},120);}
-function safeStopMain(){if(!mainRunning)return;try{mainRec.stop();}catch(e){}}
-function safeStopBarge(){if(!bargeRunning)return;try{bargeRec.stop();}catch(e){}}
-
-function handleMicClick(){
-  if(!speechSupported){document.getElementById('txt-input').focus();return;}
-  if(phase==='speaking'){stopAndKillMic();return;}
-  if(!micActive){micActive=true;safeStartMain();setPhase('listening');}
-  else{micActive=false;safeStopMain();safeStopBarge();setPhase('idle');}
+function safeStartBarge() { // this function is AI
+  if (!speechSupported || !micActive || bargeRunning) return;
+  setTimeout(function() {
+    if (!micActive || bargeRunning) return;
+    try { bargeRec.start(); } catch(e) {}
+  }, 120);
 }
 
-function stopAndKillMic(){
-  if(currentAudio){currentAudio.pause();currentAudio=null;}
-  window.speechSynthesis&&window.speechSynthesis.cancel();
-  safeStopBarge();safeStopMain();micActive=false;bargeHandling=false;
-  cooldownUntil=Date.now()+COOLDOWN_MS;setPhase('idle');
+function safeStopMain() { // this function is AI
+  if (!mainRunning) return;
+  try { mainRec.stop(); } catch(e) {}
 }
 
-function stopAgent(thenRepeat){
-  if(currentAudio){currentAudio.pause();currentAudio=null;}
-  window.speechSynthesis&&window.speechSynthesis.cancel();
-  safeStopBarge();cooldownUntil=Date.now()+COOLDOWN_MS;
-  if(thenRepeat&&lastAgentText){setTimeout(()=>{bargeHandling=false;speak(lastAgentText);},350);}
-  else{bargeHandling=false;if(micActive){setPhase('listening');safeStartMain();}else setPhase('idle');}
+function safeStopBarge() { // this function is AI
+  if (!bargeRunning) return;
+  try { bargeRec.stop(); } catch(e) {}
+}
+// </AI-assisted>
+
+// -- Mic button click handler --
+// If the agent is speaking, clicking the mic stops everything.
+// If the mic is off, turn it on, if on,turn it off. you get it
+
+// In retrospect the naming of this function is poor. What it does is it checks for mic input support (or asks for permission on first start)
+// and if there is no mic support it focuses the input field instead of crashing
+// <mine>
+function handleMicClick() {  
+  if (!speechSupported) {
+    document.getElementById('txt-input').focus();
+    return;
+  }
+
+  if (phase === 'speaking') {
+    stopAndKillMic();
+    return;
+  }
+
+  if (!micActive) {
+    micActive = true;
+    safeStartMain();
+    setPhase('listening');
+  } else {
+    micActive = false;
+    safeStopMain();
+    safeStopBarge();
+    setPhase('idle');
+  }
 }
 
-async function speak(text){
-  bargeHandling=false;
-  if(currentAudio){currentAudio.pause();currentAudio=null;}
-  window.speechSynthesis&&window.speechSynthesis.cancel();
-  safeStopMain();setPhase('speaking');if(micActive)safeStartBarge();
-  try{
-    const res=await fetch('/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
-    if(res.headers.get('content-type')?.includes('application/json')){const d=await res.json();if(d.fallback)return speakWebSpeech(text);}
-    const blob=await res.blob();const url=URL.createObjectURL(blob);
-    currentAudio=new Audio(url);
-    currentAudio.onended=()=>{URL.revokeObjectURL(url);currentAudio=null;onAgentFinished();};
-    currentAudio.onerror=()=>{currentAudio=null;onAgentFinished();};
+// Stops agent audio and turns the mic completely off
+function stopAndKillMic() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  safeStopBarge();
+  safeStopMain();
+  micActive = false;
+  bargeHandling = false;
+  cooldownUntil = Date.now() + COOLDOWN_MS;
+  setPhase('idle');
+}
+// </mine>
+
+// Stops the agent but keeps the mic alive (used by barge-in commands)
+// If thenRepeat is true, replays the last response after stopping --> THIS IS AI (because the barge-in setup is all AI)
+function stopAgent(thenRepeat) {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  safeStopBarge();
+  cooldownUntil = Date.now() + COOLDOWN_MS;
+
+  if (thenRepeat && lastAgentText) {
+    setTimeout(function() {
+      bargeHandling = false;
+      speak(lastAgentText);
+    }, 350);
+  } else {
+    bargeHandling = false;
+    if (micActive) {
+      setPhase('listening');
+      safeStartMain();
+    } else {
+      setPhase('idle');
+    }
+  }
+}
+// </AI>
+
+// --Text to Speech --
+// Tries Azure TTS first via the /tts server endpoint.
+// If the server returns fallback:true (no Azure key configured), falls back to the browser built-in Web Speech synthesis
+
+async function speak(text) {
+  bargeHandling = false;
+
+  // Stop anything currently playing
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  safeStopMain();
+  setPhase('speaking');
+
+  // Start barge-in listener while agent is speaking
+  if (micActive) safeStartBarge();
+
+  try {
+    var res = await fetch('/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text })
+    });
+
+    // Check if server returned a fallback signal instead of audio
+    var contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      var d = await res.json();
+      if (d.fallback) return speakWebSpeech(text);
+    }
+
+    // Play the audio blob returned by the server
+    var blob = await res.blob();
+    var url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+
+    currentAudio.onended = function() {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      onAgentFinished(); };
+
+    currentAudio.onerror = function() {
+      currentAudio = null;
+      onAgentFinished();
+    };
+
     await currentAudio.play();
-  }catch(e){speakWebSpeech(text);}
+
+  } catch(e) {
+    speakWebSpeech(text); // fallback browser tts
+  }
 }
 
-function speakWebSpeech(text){
-  if(!window.speechSynthesis){onAgentFinished();return;}
+// Browser Web Speech API fallback for TTS
+// Used when Azure is not configured or /tts is unreachable
+// <AI-asisted> -> I couldn't effectively setup a nice voice so I asked AI to build one for me
+function speakWebSpeech(text) {
+  if (!window.speechSynthesis) {
+    onAgentFinished();
+    return;
+  }
+
   window.speechSynthesis.cancel();
-  const utt=new SpeechSynthesisUtterance(text);
-  const voices=window.speechSynthesis.getVoices();
-  const v=voices.find(v=>v.name.includes('Google UK English Male'))||voices.find(v=>v.lang==='en-GB')||voices.find(v=>v.lang==='en-US')||voices[0];
-  if(v)utt.voice=v;utt.rate=1.05;utt.pitch=0.9;utt.volume=1;
-  utt.onend=()=>onAgentFinished();utt.onerror=()=>onAgentFinished();
+  var utt = new SpeechSynthesisUtterance(text);
+  var voices = window.speechSynthesis.getVoices();
+
+  // Try to find a natural-sounding English voice in order of preference
+  var voice = voices.find(function(v) { return v.name.includes('Google UK English Male'); }) ||
+              voices.find(function(v) { return v.lang === 'en-GB'; }) ||
+              voices.find(function(v) { return v.lang === 'en-US'; }) ||
+              voices[0];
+
+  if (voice) utt.voice = voice;
+  utt.rate = 1.05;
+  utt.pitch = 0.9;
+  utt.volume = 1;
+
+  utt.onend = function() { onAgentFinished(); };
+  utt.onerror = function() { onAgentFinished(); };
+
   window.speechSynthesis.speak(utt);
 }
 
-function onAgentFinished(){
-  safeStopBarge();currentAudio=null;bargeHandling=false;
-  cooldownUntil=Date.now()+COOLDOWN_MS;
-  if(micActive){setPhase('listening');safeStartMain();}else setPhase('idle');
+// </AI-asisted>
+  
+// Called when the agent finishes speaking (either Azure or Web Speech)
+// Resets the cooldown and returns the interface to listening or idle state
+function onAgentFinished() {
+  safeStopBarge();
+  currentAudio = null;
+  bargeHandling = false;
+  cooldownUntil = Date.now() + COOLDOWN_MS;
+
+  if (micActive) {
+    setPhase('listening');
+    safeStartMain();
+  } else {
+    setPhase('idle');
+  }
 }
 
-async function sendQuery(text){
-  if(!text.trim()){pendingQuery=false;return;}
-  clearTimeout(silenceTimer);safeStopMain();safeStopBarge();
-  setPhase('processing');removeEmpty();addTurn('user',text);showTyping(true);
-  try{
-    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,sessionId})});
-    const data=await res.json();const response=data.response||data.error||'No response received.';
-    showTyping(false);lastAgentText=response;addTurn('agent',response);speak(response);
-  }catch(e){
-    showTyping(false);const err='Connection error. Check server status.';
-    addTurn('agent',err);lastAgentText=err;speak(err);
-  }finally{pendingQuery=false;}
+// -- Send query to the server -
+// Sends the user's text to /chat, which calls Dialogflow and optionally
+// enhances the response with Claude before returning it
+// <AI-asisted> -> for the Claude API application
+
+async function sendQuery(text) {
+  if (!text.trim()) {
+    pendingQuery = false;
+    return;
+  }
+
+  clearTimeout(silenceTimer);
+  safeStopMain();
+  safeStopBarge();
+  setPhase('processing');
+  removeEmpty();
+  addTurn('user', text);
+  showTyping(true);
+
+  try {
+    var res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, sessionId: sessionId })
+    });
+
+    var data = await res.json();
+    var response = data.response || data.error || 'No response received.';
+
+    showTyping(false);
+    lastAgentText = response;
+    addTurn('agent', response);
+    speak(response);
+    
+  } catch(e) {
+    showTyping(false);
+    var errMsg = 'Connection error. Check server status.';
+    addTurn('agent', errMsg);
+    lastAgentText = errMsg;
+    speak(errMsg);
+  } finally {
+    pendingQuery = false;
+  }
 }
 
-function sendText(){
-  if(phase==='speaking'){stopAndKillMic();return;}
-  const inp=document.getElementById('txt-input');const t=inp.value.trim();if(!t)return;
-  inp.value='';if(!pendingQuery){pendingQuery=true;sendQuery(t);}
+// -- Text input send button --
+// If the agent is currently speaking the send button acts as a stop button
+
+function sendText() {
+  if (phase === 'speaking') {
+    stopAndKillMic();
+    return;
+  }
+
+  var inp = document.getElementById('txt-input');
+  var text = inp.value.trim();
+  if (!text) return;
+
+  inp.value = '';
+  if (!pendingQuery) {
+    pendingQuery = true;
+    sendQuery(text);
+  }
 }
 
-const MIC_SVG=`<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>`;
-const X_SVG=`<line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/>`;
+// SVG paths for the mic icon and the X icon shown while the agent is speaking -> THIS IS FROM A PRE-MADE ASSET + AI EDITING
+var MIC_SVG = '<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>';
+var X_SVG = '<line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/>';
 
-function setPhase(p){
-  phase=p;const visual=(p==='speaking'&&micActive)?'barge':p;
-  document.getElementById('mic-btn').className='mic-btn '+visual;
-  document.getElementById('mic-wrap').className='mic-wrap '+visual;
-  document.getElementById('mic-svg').innerHTML=(p==='speaking')?X_SVG:MIC_SVG;
-  const wf=document.getElementById('waveform');
-  wf.className='waveform'+(visual==='listening'||visual==='barge'||visual==='speaking'?' active':'')+
-               (visual==='speaking'?' speaking-wf':visual==='barge'?' barge-wf':'');
-  const labels={idle:'Press mic or type below',listening:'Listening...',processing:'Processing...',speaking:'Speaking...'};
-  document.getElementById('status-text').textContent=labels[p]||'Ready';
-  document.getElementById('status-label').className='status-label '+(visual==='barge'?'barge':p);
-  document.getElementById('action-hints').className='action-hints'+(p==='speaking'&&micActive?' visible':'');
-  const sb=document.getElementById('txt-send');
-  if(p==='speaking'){sb.textContent='■ STOP';sb.className='txt-send stop-mode';}
-  else{sb.textContent='SEND →';sb.className='txt-send';}
+// -- UI state management --
+// Updates visual elements to reflect the current phase
+
+function setPhase(p) {
+  phase = p;
+
+  // When speaking with mic active, show barge-in visual state
+  var visual = (p === 'speaking' && micActive) ? 'barge' : p;
+
+  document.getElementById('mic-btn').className = 'mic-btn ' + visual;
+  document.getElementById('mic-wrap').className = 'mic-wrap ' + visual;
+  document.getElementById('mic-svg').innerHTML = (p === 'speaking') ? X_SVG : MIC_SVG;
+
+  // Update waveform animation (animation by AI)
+  var wf = document.getElementById('waveform');
+  var wfActive = (visual === 'listening' || visual === 'barge' || visual === 'speaking');
+  wf.className = 'waveform' +
+    (wfActive ? ' active' : '') +
+    (visual === 'speaking' ? ' speaking-wf' : '') +
+    (visual === 'barge' ? ' barge-wf' : '');
+
+  // Update status label
+  var labels = {
+    idle: 'Press mic or type below',
+    listening: 'Listening...',
+    processing: 'Processing...',
+    speaking: 'Speaking...'
+  };
+  document.getElementById('status-text').textContent = labels[p] || 'Ready';
+  document.getElementById('status-label').className = 'status-label ' + (visual === 'barge' ? 'barge' : p);
+
+  // Show action hints (stop / repeat) only while speaking with mic active
+  document.getElementById('action-hints').className = 'action-hints' + (p === 'speaking' && micActive ? ' visible' : '');
+
+  // Toggle send button between SEND and STOP
+  var sendBtn = document.getElementById('txt-send');
+  if (p === 'speaking') {
+    sendBtn.textContent = '■ STOP';
+    sendBtn.className = 'txt-send stop-mode';
+  } else {
+    sendBtn.textContent = 'SEND →'; // "Where'd he find the arrow? - Google 'arrow symbol', just being extremely careful!
+    sendBtn.className = 'txt-send';
+  }
 }
 
-function updateStatusText(p,t){document.getElementById('status-text').textContent=t;document.getElementById('status-label').className='status-label '+p;}
-
-function addTurn(role,text){
-  const conv=document.getElementById('conversation');const inner=conv.querySelector('.inner');const typing=document.getElementById('typing');
-  const turn=document.createElement('div');turn.className='turn '+role;
-  turn.innerHTML=`<div class="turn-label">${role==='user'?'OPERATOR':'GRIDGUARD'}</div><div class="turn-text">${esc(text)}</div>`;
-  inner.insertBefore(turn,typing);conv.scrollTop=conv.scrollHeight;
+function updateStatusText(p, t) {
+  document.getElementById('status-text').textContent = t;
+  document.getElementById('status-label').className = 'status-label ' + p;
 }
-function showTyping(show){document.getElementById('typing').className='typing-indicator'+(show?' visible':'');if(show)document.getElementById('conversation').scrollTop=999999;}
-function removeEmpty(){const el=document.getElementById('empty-state');if(el)el.remove();}
-function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// </AI-asisted>
+  
+// -- Conversation transcript --
+// Adds a message turn to the conversation panel
 
-window.onload=()=>{
+function addTurn(role, text) {
+  var conv = document.getElementById('conversation');
+  var inner = conv.querySelector('.inner');
+  var typing= document.getElementById('typing');
+
+  var turn = document.createElement('div');
+  turn.className = 'turn ' + role;
+  turn.innerHTML = '<div class="turn-label">' + (role === 'user' ? 'OPERATOR' : 'GRIDGUARD') + '</div>' +
+  '<div class="turn-text">' + esc(text) + '</div>';
+
+  inner.insertBefore(turn, typing);
+  conv.scrollTop = conv.scrollHeight;
+}
+
+function showTyping(show) {
+  document.getElementById('typing').className = 'typing-indicator' + (show ? ' visible' : '');
+  if (show) document.getElementById('conversation').scrollTop = 999999;
+}
+
+function removeEmpty() {
+  var el = document.getElementById('empty-state');
+  if (el) el.remove();
+}
+
+// Escapes HTML special characters to prevent XSS when inserting text into the DOM
+// Thought I should explicitly comment on this because it might look weird "why would you protect from XSS?
+// Realistically, it doesn't matter, but I always do this because it's good practice, I just copy-pasted it from another
+// project of mine
+function esc(t) {
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// -- Page load --
+window.onload = function() {
   initSpeech();
-  if(window.speechSynthesis){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();}
+  // Pre-load voices list for Web Speech fallback --> AI recommendation and actually helped speed up the app a bit!
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = function() {
+      window.speechSynthesis.getVoices();
+    };
+  }
 };
 </script>
 </body>
