@@ -22,7 +22,7 @@ app.use(function(req, res, next) {
 });
 
 // -------------------------------------------------------
-// Static data - simulates what a real SCADA system would return
+// Static data - simulates what a real SCADA (supervisory control and data access) system would return
 // -------------------------------------------------------
 
 const outageData = {
@@ -45,12 +45,12 @@ const equipmentData = {
 };
 
 const contactData = {
-  "Current Shift":    { supervisor: "Ahmed Karim",         extension: "4412" },
-  "Morning Shift":    { supervisor: "Maria Santos",         extension: "4401" },
+  "Current Shift":    { supervisor: "Stavros Apostolou",    extension: "4412" },
+  "Morning Shift":    { supervisor: "Kostas Mpampiniotis",  extension: "4401" },
   "Evening Shift":    { supervisor: "Nikos Papadopoulos",   extension: "4407" },
-  "Night Shift":      { supervisor: "Elena Volkov",         extension: "4415" },
-  "Safety Officer":   { name: "James Osei",                 extension: "4430" },
-  "Maintenance Team": { lead: "Yusuf Al-Rashid",            extension: "4420" },
+  "Night Shift":      { supervisor: "George Xirogiannis",   extension: "4415" },
+  "Safety Officer":   { name: "Andreas Apazidis",           extension: "4430" },
+  "Maintenance Team": { lead: "Mama Mia",                   extension: "4420" },
   "Emergency Hotline":{ number: "0800-GRIDGUARD" }
 };
 
@@ -73,7 +73,7 @@ const procedureData = {
   "Transformer Fire":     "Step 1: Isolate the transformer using the manual disconnect switch. Step 2: Activate the CO2 suppression system. Step 3: Contact the fire brigade. Ready for Step 2?",
   "Gas Leak Response":    "Step 1: Evacuate the affected area immediately. Step 2: Do not use any electrical switches. Step 3: Call the gas emergency line. Ready for Step 2?",
   "Electrical Isolation": "Step 1: Identify the correct isolation point on the single-line diagram. Step 2: Apply lockout and tagout. Step 3: Verify isolation using a voltage tester. Ready for Step 2?",
-  "Flood Response":       "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps. Step 3: Notify the facility manager. Ready for Step 2?",
+  "Flood Response":       "Step 1: Isolate all electrical equipment in the flood zone. Step 2: Activate the sump pumps.Step 3: Notify the facility manager. Ready for Step 2?",
   "First Aid":            "Step 1: Make sure the scene is safe before approaching. Step 2: Call the on-site first aider on Extension 4430. Step 3: Do not move the injured person unless in immediate danger. Ready for Step 2?"
 };
 
@@ -122,7 +122,7 @@ async function callDialogflow(userText, sessionId) {
   var projectId = process.env.DIALOGFLOW_PROJECT_ID;
 
   if (!credentialsRaw || !projectId) {
-    throw new Error('Missing GOOGLE_CREDENTIALS or DIALOGFLOW_PROJECT_ID environment variables.');
+    throw new Error('Missing GOOGLE_CREDENTIALS or DIALOGFLOW_PROJECT_ID env');
   }
 
   const { GoogleAuth } = require('google-auth-library');
@@ -163,7 +163,7 @@ async function callDialogflow(userText, sessionId) {
 
 // -------------------------------------------------------
 // Claude enhancement (makes responses sound more natural)
-// This is part of the out-of-scope bonus web interface
+// This is part of the out-of-scope bonus web interface, the setup follows anthropic's docs
 // -------------------------------------------------------
 
 async function enhanceWithClaude(fulfillmentText) {
@@ -197,7 +197,7 @@ async function enhanceWithClaude(fulfillmentText) {
 }
 
 // -------------------------------------------------------
-// /chat endpoint - used by the bonus web interface
+// /chat endpoint used by the bonus web interface
 // Sends user text to Dialogflow, then optionally enhances with Claude
 // -------------------------------------------------------
 
@@ -217,6 +217,8 @@ app.post('/chat', async function(req, res) {
 
     // Short prompt questions (under 20 words ending in ?) do not need Claude enhancement
     // because they are already phrased correctly and Claude tends to over-elaborate them
+    // for example it would sometimes turn a 5-word response into a 22+ words response, breaking
+    // the tone of voice requirements and the persona definition
     var wordCount = rawResponse.split(' ').length;
     var isShortPrompt = rawResponse.endsWith('?') && wordCount < 20;
 
